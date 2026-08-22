@@ -92,7 +92,12 @@ class MuleDetector:
                                "mule_ring_score": 0, "component_size": 1}
             comp = nx.node_connected_component(self.g, primary)
             fan_vpas = self._fan_out(primary)
-            ring = fan_vpas >= 4 or (fan_vpas >= 3 and len(comp) >= 10)
+            # Only payment identities (VPAs/cards) count toward ring mass —
+            # customers/emails/IPs inflate component size and would make a
+            # 3-VPA household look like a mule ring (see test_graph_generalization).
+            identity_mass = sum(
+                1 for n in comp if self.g.nodes[n].get("type") in ("vpa", "card"))
+            ring = fan_vpas >= 4 or (fan_vpas >= 3 and identity_mass >= 8)
             conf = min(0.98, 1.0 - math.exp(-max(fan_vpas - 1, 0) / 6.0))
             if ring:
                 conf = max(conf, 0.72)

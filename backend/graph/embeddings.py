@@ -1,8 +1,10 @@
-"""GraphSAGE-lite node encoder — PyTorch Geometric when available,
-deterministic structural fallback otherwise.
+"""OPTIONAL offline node-encoder experiment — NOT part of the live scoring path.
 
-The hot scoring path uses NetworkX topology (sub-ms). Enable this module via
-TRACER_USE_EMBEDDINGS=1 for offline ring re-scoring with learned embeddings.
+The production mule-ring detector runs on graph topology heuristics
+(degree, fan-out, connected-component mass) via backend/graph/mule_detector.py.
+This module exists for future offline re-scoring with learned embeddings
+(PyTorch Geometric when available, structural fallback otherwise). Nothing in
+the request pipeline imports it, and no live claim depends on it.
 """
 from __future__ import annotations
 

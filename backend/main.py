@@ -48,11 +48,13 @@ def create_app() -> FastAPI:
 
     @app.get("/healthz", tags=["ops"])
     def healthz() -> dict:
-        ledger_ok = get_ledger().verify_chain()
+        ledger = get_ledger()
+        audit = ledger.state()               # O(1); deep scan only at boot
         return {
-            "status": "ok" if ledger_ok else "degraded",
+            "status": "ok" if audit["intact"] else "degraded",
             "uptime_s": round(time.time() - _BOOT_T0, 1),
-            "audit_chain_verified": ledger_ok,
+            "audit_chain_verified": audit["intact"],
+            "audit": audit,
             "components": component_status(),
         }
 
@@ -75,15 +77,23 @@ def create_app() -> FastAPI:
             return json.loads(path.read_text(encoding="utf-8"))
         return {}
 
+    @app.get("/api/v1/model/report", tags=["ops"])
+    def model_report() -> dict:
+        """Live honest-metrics card: synthetic GT holdout + FP cost per 1k legit."""
+        from backend.models.report import get_report
+
+        return get_report()
+
     @app.get("/api/v1/ledger/stats", tags=["ops"])
-    def ledger_stats() -> dict:
+    def ledger_stats(deep: bool = False) -> dict:
         ledger = get_ledger()
-        lines = 0
-        if ledger.path.exists():
-            with ledger.path.open("r", encoding="utf-8") as fh:
-                lines = sum(1 for line in fh if line.strip())
-        return {"entries": lines, "chain_verified": ledger.verify_chain(),
-                "path": str(ledger.path.name)}
+        audit = ledger.state()
+        out = {"entries": audit["entries"], "chain_verified": audit["intact"],
+               "chain_head": audit["head"], "path": str(ledger.path.name)}
+        if deep:                             # explicit full re-scan on demand
+            out["chain_verified"] = ledger.verify_chain()
+            out["deep_scan"] = True
+        return out
 
     @app.post("/api/v1/sandbox/smoke", tags=["sandbox"])
     async def smoke(event: TransactionEvent) -> dict:

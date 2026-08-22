@@ -1,4 +1,5 @@
-"""GBDT risk scorer — XGBoost trained on seeded synthetic fraud distributions,
+"""GBDT risk scorer — XGBoost trained on the DECOUPLED ground-truth process
+(data/ground_truth.py — nonlinear interactions, confounder, label noise),
 with a calibrated linear fallback so the engine never fails to boot.
 
 Pipeline contract:
@@ -12,14 +13,9 @@ from typing import Any
 
 from backend.config import MODEL_PATH, MODEL_VERSION
 from backend.schemas import TransactionEvent
+from data.schema import FEATURE_NAMES
 
-FEATURES: list[str] = [
-    "amount_log", "amount_gt_50k", "is_cod", "address_mismatch",
-    "account_newness", "new_customer", "txn_rate_1h", "txn_rate_24h",
-    "amount_velocity", "avg_ticket_ratio", "device_spread",
-    "device_fan_out", "vpa_degree", "card_share", "ip_crowding",
-    "rto_rate", "night_hour", "disposable_email", "mule_confidence",
-]
+FEATURES = FEATURE_NAMES          # canonical name list lives in data/schema.py
 
 BASELINE: dict[str, float] = {
     "amount_log": 0.45, "amount_gt_50k": 0.03, "is_cod": 0.20,
@@ -41,12 +37,10 @@ WEIGHTS: dict[str, float] = {
     "mule_confidence": 2.40,
 }
 _BIAS = -3.35
-
-# Latent-process calibration used by BOTH the trainer and data/generate_synthetic.py
-# so train/test distributions always match production assumptions.
-TRAIN_INTERCEPT_SHIFT = -1.30      # pushes base fraud rate low (imbalanced)
-LOGIT_SCALE = 1.60                 # sharpens class separation
-LATENT_NOISE_SIGMA = 0.15          # small irreducible label stochasticity
+# WEIGHTS/_BIAS above are an engineering PRIOR used by (a) the calibrated-linear
+# fallback scorer when xgboost is unavailable and (b) SHAP-style attribution
+# anchors. They are NOT the label function — training labels come exclusively
+# from data/ground_truth.py (see RiskModel._train).
 
 _DISPOSABLE_DOMAINS = {
     "mailinator.com", "tempmail.dev", "guerrillamail.com",
@@ -125,6 +119,10 @@ class RiskModel:
                 booster = xgb.Booster()
                 booster.load_model(str(MODEL_PATH))
                 if booster.num_features() == len(FEATURES):
+                    # Single-threaded inference: rows are tiny (19 features);
+                    # all-core predict causes thread oversubscription that
+                    # collapses p99 under concurrent load.
+                    booster.set_param({"nthread": 1})
                     self._booster = booster
                     self.kind = "xgboost"
                     return
@@ -136,35 +134,16 @@ class RiskModel:
 
     @staticmethod
     def _train(xgb) -> Any:
+        """Train on (X, y) pairs from the DECOUPLED ground-truth process.
+
+        The model sees sampled rows only — never ground_truth's functional
+        form, interactions, confounder effects, or flip mask.
+        """
         import numpy as np
 
-        rng = np.random.default_rng(42)
-        n = 20_000
-        X = np.column_stack([
-            rng.uniform(0.35, 0.95, n),                       # amount_log
-            (rng.random(n) < 0.04).astype(float),             # amount_gt_50k
-            (rng.random(n) < 0.25).astype(float),             # is_cod
-            (rng.random(n) < 0.07).astype(float),             # address_mismatch
-            np.clip(rng.exponential(0.4, n), 0, 1),           # account_newness
-            (rng.random(n) < 0.12).astype(float),             # new_customer
-            np.clip(rng.pareto(3.0, n) * 0.08, 0, 1),         # txn_rate_1h
-            np.clip(rng.pareto(2.5, n) * 0.07, 0, 1),         # txn_rate_24h
-            np.clip(rng.pareto(2.8, n) * 0.06, 0, 1),         # amount_velocity
-            np.clip(rng.gamma(1.2, 0.15, n), 0, 1),           # avg_ticket_ratio
-            np.clip(rng.pareto(3.5, n) * 0.09, 0, 1),         # device_spread
-            np.clip(rng.pareto(2.2, n) * 0.10, 0, 1),         # device_fan_out
-            np.clip(rng.pareto(2.6, n) * 0.09, 0, 1),         # vpa_degree
-            np.clip(rng.pareto(3.0, n) * 0.07, 0, 1),         # card_share
-            np.clip(rng.pareto(3.2, n) * 0.08, 0, 1),         # ip_crowding
-            np.clip(rng.beta(1.1, 9.0, n), 0, 1),             # rto_rate
-            (rng.random(n) < 0.14).astype(float),             # night_hour
-            (rng.random(n) < 0.02).astype(float),             # disposable_email
-            np.clip(rng.pareto(2.4, n) * 0.08, 0, 1),         # mule_confidence
-        ])
-        w = np.array([WEIGHTS[f] for f in FEATURES])
-        logits = (LOGIT_SCALE * (X @ w + _BIAS + TRAIN_INTERCEPT_SHIFT)
-                  + rng.normal(0, LATENT_NOISE_SIGMA, n))
-        y = (rng.random(n) < 1.0 / (1.0 + np.exp(-logits))).astype(int)
+        from data.ground_truth import sample_dataset
+
+        X, y, _p_true = sample_dataset(n=24_000, seed=42)
 
         dtrain = xgb.DMatrix(X, label=y, feature_names=FEATURES)
         # Domain prior: risk is monotonically non-decreasing in EVERY feature
@@ -178,6 +157,7 @@ class RiskModel:
             "monotone_constraints": mono,
         }
         booster = xgb.train(params, dtrain, num_boost_round=500)
+        booster.set_param({"nthread": 1})   # see _load_or_train: avoid predict thrash
         MODEL_PATH.parent.mkdir(parents=True, exist_ok=True)
         booster.save_model(str(MODEL_PATH))
         return booster

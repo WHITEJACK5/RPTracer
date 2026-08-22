@@ -75,7 +75,7 @@ export const PRESETS: Record<string, Preset> = {
   },
   mule_ring: {
     label: "Multi-Account Mule Ring",
-    description: "One device → 14 flagged VPAs — GraphSAGE ring detection",
+    description: "One device → 14 flagged VPAs — graph-topology ring detection",
     expected_band: "HIGH",
     payload: {
       event_id: "pay_demo_mule_001",

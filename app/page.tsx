@@ -61,14 +61,15 @@ export default function Page() {
             DEFENSE-ONLY AUTONOMOUS RISK ENGINE
           </span>
           <h1 className="font-grotesk text-4xl font-bold leading-[1.05] tracking-tight text-white md:text-[44px]">
-            Every payment, scored &amp;
+            Mule rings don&apos;t hide
             <br />
-            defended in <span className="text-gradient">milliseconds.</span>
+            from <span className="text-gradient">topology.</span>
           </h1>
           <p className="max-w-xl text-sm leading-relaxed text-white/50">
-            GBDT risk scoring with SHAP attribution, NetworkX/Neo4j mule-ring intelligence and a
-            bounded agent that approves, challenges or holds payouts — every decision written to a
-            hash-chained audit ledger.
+            TRACER links devices, VPAs, cards and IPs into a live entity graph,
+            detects abuse-ring fan-out in milliseconds, and hands the case to a
+            bounded agent that can only approve, challenge or hold — every action
+            written to a hash-chained ledger.
           </p>
           <div className="mt-1 flex flex-wrap gap-2">
             <span className="chip font-mono !text-[10px] text-teal-glow/90">◆ XGBoost GBDT + SHAP</span>

@@ -1,9 +1,9 @@
 """Idempotency middleware — Redis-backed with an in-process TTL fallback.
 
-POSTs carrying an `X-Idempotency-Key` header are cached for
-IDEMPOTENCY_TTL_SECONDS. Replays return the *original* response with the
-header `X-Idempotent-Replay: true`, guaranteeing exactly-once risk decisions
-under webhook retries.
+Pure-ASGI implementation (no BaseHTTPMiddleware task machinery): POSTs carrying
+an `X-Idempotency-Key` header are cached for IDEMPOTENCY_TTL_SECONDS; replays
+return the original response with `X-Idempotent-Replay: true`, guaranteeing
+exactly-once risk decisions under webhook retries.
 """
 from __future__ import annotations
 
@@ -12,9 +12,7 @@ import threading
 import time
 from typing import Any
 
-from starlette.middleware.base import BaseHTTPMiddleware
-from starlette.requests import Request
-from starlette.responses import Response
+from starlette.datastructures import Headers
 
 
 class _MemoryStore:
@@ -77,35 +75,48 @@ def build_store(ttl_seconds: int):
     return _MemoryStore(ttl_seconds)
 
 
-class IdempotencyMiddleware(BaseHTTPMiddleware):
+class IdempotencyMiddleware:
+    """Pure ASGI middleware — zero per-request task overhead."""
+
     def __init__(self, app, store=None, ttl_seconds: int = 600) -> None:
-        super().__init__(app)
+        self.app = app
         self.store = store or build_store(ttl_seconds)
 
-    async def dispatch(self, request: Request, call_next) -> Response:
-        idem_key = request.headers.get("X-Idempotency-Key")
-        if request.method != "POST" or not idem_key:
-            return await call_next(request)
+    async def __call__(self, scope, receive, send) -> None:
+        if scope["type"] != "http" or scope["method"] != "POST":
+            await self.app(scope, receive, send)
+            return
+        idem_key = Headers(scope=scope).get("X-Idempotency-Key")
+        if not idem_key:
+            await self.app(scope, receive, send)
+            return
 
-        cache_key = f"{request.url.path}::{idem_key}"
+        cache_key = f"{scope['path']}::{idem_key}"
         cached = self.store.get(cache_key)
         if cached is not None:
             status, headers, body = cached
-            replay_headers = {k: v for k, v in headers.items()
-                              if k.lower() not in ("content-length",)}
-            replay_headers["X-Idempotent-Replay"] = "true"
-            return Response(content=body, status_code=status,
-                            headers=replay_headers, media_type=headers.get("content-type", "application/json"))
+            out_headers = [(k.lower().encode("latin-1"), str(v).encode("latin-1"))
+                           for k, v in headers.items()
+                           if k.lower() not in ("content-length", "x-idempotent-replay")]
+            out_headers.append((b"x-idempotent-replay", b"true"))
+            await send({"type": "http.response.start", "status": status,
+                        "headers": out_headers})
+            await send({"type": "http.response.body", "body": body})
+            return
 
-        response = await call_next(request)
-        if response.status_code < 500:
-            body = b""
-            async for chunk in response.body_iterator:  # type: ignore[attr-defined]
-                body += chunk
-            flat_headers = {k: v for k, v in response.headers.items()}
-            self.store.put(cache_key, response.status_code, flat_headers, body)
-            return Response(
-                content=body, status_code=response.status_code,
-                headers=flat_headers, media_type=response.media_type,
-            )
-        return response
+        captured: dict[str, Any] = {"chunks": []}
+
+        async def send_wrapper(message) -> None:
+            if message["type"] == "http.response.start":
+                captured["status"] = message["status"]
+                captured["headers"] = {k.decode("latin-1"): v.decode("latin-1")
+                                       for k, v in message.get("headers", [])}
+            elif message["type"] == "http.response.body":
+                captured["chunks"].append(message.get("body", b""))
+                more = message.get("more_body", False)
+                if not more and captured.get("status", 500) < 500:
+                    self.store.put(cache_key, captured["status"],
+                                   captured["headers"], b"".join(captured["chunks"]))
+            await send(message)
+
+        await self.app(scope, receive, send_wrapper)

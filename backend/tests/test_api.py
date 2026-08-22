@@ -50,20 +50,56 @@ def test_webhook_payment_captured_maps_paise_and_scores(client):
     assert body["event_id"] == "pay_HOOK_001"
     assert body["decision"] in {"AUTO_APPROVE", "STEP_UP_AUTHENTICATION",
                                 "PAUSE_PAYOUT_AND_GENERATE_DISPUTE_DOSSIER"}
-    assert body["webhook_signature_verified"] is True      # no secret configured -> dev-verified
+    # no secret configured -> signature was NOT checked, and we say so
+    assert body["webhook_signature_verified"] is False
+    assert "webhook_verification_skipped_reason" in body
 
 
 def test_webhook_rejects_bad_signature(client, monkeypatch):
+    import json
+
     from backend.api.v1 import webhooks as wh
 
     monkeypatch.setattr(wh, "RAZORPAY_WEBHOOK_SECRET", "test_secret_ky")
-    envelope = {"event": "order.paid", "payload": {"payment": {"id": "pay_X", "amount": 100}}}
-    raw = str(envelope).encode()
+    raw = json.dumps({"event": "order.paid",
+                      "payload": {"payment": {"id": "pay_X", "amount": 100}}}).encode()
     bad_sig = hmac.new(b"wrong_secret", raw, hashlib.sha256).hexdigest()
     r = client.post("/api/v1/webhooks/razorpay", content=raw,
                     headers={"X-Razorpay-Signature": bad_sig,
                              "Content-Type": "application/json"})
     assert r.status_code == 401
+
+
+def test_webhook_verified_when_secret_configured(client, monkeypatch):
+    """With a secret configured, a correctly-signed webhook reports verified."""
+    import json
+
+    from backend.api.v1 import webhooks as wh
+
+    secret = "coop_secret_42"
+    monkeypatch.setattr(wh, "RAZORPAY_WEBHOOK_SECRET", secret)
+    raw = json.dumps({"event": "payment.captured",
+                      "payload": {"payment": {"id": "pay_SIGNED", "amount": 150000,
+                                              "method": "upi", "vpa": "signed@ybl"}}}).encode()
+    sig = hmac.new(secret.encode(), raw, hashlib.sha256).hexdigest()
+    r = client.post("/api/v1/webhooks/razorpay", content=raw,
+                    headers={"X-Razorpay-Signature": sig,
+                             "Content-Type": "application/json"})
+    assert r.status_code == 200
+    assert r.json()["webhook_signature_verified"] is True
+    assert "webhook_verification_skipped_reason" not in r.json()
+
+
+def test_webhook_enforced_rejects_unsigned_when_no_secret(client, monkeypatch):
+    """Production posture: enforcement on + secret unset -> hard 403."""
+    from backend.api.v1 import webhooks as wh
+
+    monkeypatch.setattr(wh, "REQUIRE_WEBHOOK_SECRET", True)
+    monkeypatch.setattr(wh, "RAZORPAY_WEBHOOK_SECRET", None)
+    envelope = {"event": "payment.captured",
+                "payload": {"payment": {"id": "pay_UNSEC", "amount": 100}}}
+    r = client.post("/api/v1/webhooks/razorpay", json=envelope)
+    assert r.status_code == 403
 
 
 def test_dispute_created_forces_dossier_path(client):

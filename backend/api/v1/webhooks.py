@@ -14,7 +14,7 @@ import uuid
 from fastapi import APIRouter, Request
 from fastapi.responses import JSONResponse
 
-from backend.config import RAZORPAY_WEBHOOK_SECRET
+from backend.config import RAZORPAY_WEBHOOK_SECRET, REQUIRE_WEBHOOK_SECRET
 from backend.core.engine import run_pipeline
 from backend.schemas import (
     Context,
@@ -96,13 +96,35 @@ def _to_event(envelope: WebhookEnvelope) -> tuple[TransactionEvent, bool]:
 @router.post("/razorpay")
 async def razorpay_webhook(request: Request) -> JSONResponse:
     raw = await request.body()
-    signed = verify_signature(raw, request.headers.get("X-Razorpay-Signature"))
-    if RAZORPAY_WEBHOOK_SECRET and not signed:
+    signature = request.headers.get("X-Razorpay-Signature")
+    signed = verify_signature(raw, signature)
+
+    if not RAZORPAY_WEBHOOK_SECRET:
+        # DEV/DEMO MODE — verification is skipped, and we SAY SO instead of
+        # reporting an unchecked signature as verified.
+        if REQUIRE_WEBHOOK_SECRET:
+            return JSONResponse(
+                status_code=403,
+                content={"detail": "webhook rejected: RAZORPAY_WEBHOOK_SECRET "
+                                   "is not configured (enforcement enabled)"},
+            )
+        envelope = WebhookEnvelope.model_validate_json(raw)
+        ev, force_high = _to_event(envelope)
+        evaluation = await run_pipeline(ev, force_high=force_high)
+        body = evaluation.model_dump(mode="json")
+        body["webhook_signature_verified"] = False
+        body["webhook_verification_skipped_reason"] = (
+            "no secret configured (dev/demo mode); set RAZORPAY_WEBHOOK_SECRET "
+            "to enforce HMAC-SHA256 verification"
+        )
+        return JSONResponse(content=body, headers={"X-Tracer-Webhook": envelope.event})
+
+    if not signed:
         return JSONResponse(status_code=401, content={"detail": "invalid webhook signature"})
 
     envelope = WebhookEnvelope.model_validate_json(raw)
     ev, force_high = _to_event(envelope)
     evaluation = await run_pipeline(ev, force_high=force_high)
     body = evaluation.model_dump(mode="json")
-    body["webhook_signature_verified"] = signed or not bool(RAZORPAY_WEBHOOK_SECRET)
+    body["webhook_signature_verified"] = True
     return JSONResponse(content=body, headers={"X-Tracer-Webhook": envelope.event})

@@ -1,195 +1,151 @@
-# 🛡️ TRACER v1.0 — High-Frequency AI Risk Engine
+# TRACER v1.0 — Autonomous Mule-Ring Defense for Razorpay Merchants
 
 > **Razorpay AI Buildathon 2026 · Track 2: AI Risk Manager**
-> Defense-only autonomous merchant protection: sub-50ms GBDT scoring, mule-ring
-> graph intelligence, and a bounded agent that approves, challenges or holds payouts —
-> with every decision written to a tamper-evident double-entry ledger.
+> One loss class, measured end to end: **abuse-ring (mule) detection**.
+> TRACER links devices, VPAs, card fingerprints and IPs into a live entity graph,
+> detects fan-out rings in milliseconds, and hands the case to a *bounded* agent
+> that can only approve, challenge, or hold — every action written to a
+> tamper-evident ledger.
 
----
+## The headline capability
 
-## Architecture
+A mule ring is one operator behind dozens of payment identities. Tabular models
+score each transaction in isolation and miss it; the topology gives it away.
+TRACER's detector runs on **graph topology heuristics — degree, fan-out,
+connected-component identity-mass analysis** (NetworkX; optional Neo4j mirror):
 
-```mermaid
-flowchart TD
-    subgraph Client["Next.js 14 Dashboard (glassmorphism)"]
-        Sandbox["Payload Sandbox<br/>4 attack presets"]
-        Gauge["Risk Gauge + SHAP"]
-        Canvas["Mule-Ring Graph Canvas"]
-        Term["Agent Terminal<br/>(typewriter stream)"]
-    end
+- ≥4 payment identities on one device ⇒ ring flagged with confidence ≥72%
+- Proven on **novel** rings assembled live through the public API
+  (`backend/tests/test_graph_generalization.py`) — not just the seeded demo fixture
+- Negative control: benign household fan-out (1 device, 2–3 VPAs) does NOT fire;
+  this false-positive-on-structure control is asserted in the same test file
 
-    subgraph Edge["FastAPI Edge (<50ms SLA)"]
-        Idem["Idempotency Middleware<br/>Redis / in-proc TTL"]
-        Eval["POST /api/v1/risk/evaluate"]
-        Hook["POST /api/v1/webhooks/razorpay<br/>HMAC-SHA256 verified"]
-    end
+Everything else — RTO/COD scoring, LLM dispute dossiers — is listed under
+[Also included](#also-included-extensions-not-headline-claims).
 
-    subgraph Engine["Hybrid Intelligence"]
-        GBDT["XGBoost GBDT<br/>(imbalanced, seeded)"]
-        Floor["Deterministic Policy Floors<br/>(guardrails)"]
-        SHAPx["SHAP-style Attribution<br/>(additive, score-aligned)"]
-        Graph["NetworkX Entity Graph<br/>+ optional Neo4j mirror"]
-    end
+## Reproducible numbers (run them yourself)
 
-    subgraph Agent["Bounded Agent State Machine"]
-        SM{"0-30 | 31-70 | 71-100"}
-        AA["AUTO_APPROVE"]
-        SU["STEP_UP_AUTHENTICATION<br/>(2FA OTP)"]
-        HD["PAUSE_PAYOUT +<br/>GENERATE_DISPUTE_DOSSIER"]
-        LLM["LLM Dossier (strict JSON)<br/>template fallback"]
-    end
+| Command | What it proves |
+|---|---|
+| `python -m pytest backend/tests -q` | 23 tests: bands, idempotent replay, webhook signature honesty, novel-ring detection, negative control, injection sanitization, ledger tamper-evidence |
+| `python data/generate_synthetic.py` | GBDT quality vs an **independent** label process + FP cost table |
+| `python scripts/bench_latency.py` | real latency: sequential per-payment p50/p95/p99 |
+| `curl localhost:8000/api/v1/model/report` | live honest-metrics card |
 
-    Ledger[("Append-Only<br/>Hash-Chained<br/>Double-Entry Ledger")]
+### Model quality — synthetic sanity check (not real-world performance)
 
-    Sandbox --> Eval
-    Hook --> Engine
-    Eval --> Idem --> GBDT
-    Eval --> Graph
-    Graph --> Floor
-    GBDT --> Floor
-    Floor --> SM
-    SM --> AA & SU & HD
-    HD --> LLM
-    SM --> Ledger
-    Engine --> Gauge & Canvas
-    SM --> Term
-```
-
-**Measured on the demo machine:** normal UPI `11/100 · AUTO_APPROVE · 18.6ms`,
-mule ring `88/100 ring_detected · 6.6ms`, RTO-COD `97/100`, synthetic-ID `84/100`.
-
-### Model quality (honest, reproducible)
-
-`python data/generate_synthetic.py` regenerates the seeded benchmark (3.3% fraud
-prevalence) and reports **held-out** metrics against the theoretical bound:
+`data/ground_truth.py` generates labels via a process that shares **zero code**
+with the scorer: nonlinear interaction terms (`cod ∧ mismatch ∧ rto>0.4`,
+synthetic-identity conjunctions), a merchant-category confounder shifting amounts
+and fraud rates together, and 6.5% flipped labels. Latest run (seed 1337, 6k rows,
+8.65% prevalence):
 
 ```
-AUPRC                 : 0.268   (baseline 0.033)   -> 8.1x lift over random
-Bayes ceiling AUPRC   : 0.321   (irreducible Bernoulli label noise)
-efficiency vs ceiling : 84%
+AUPRC                 : 0.095   (baseline prevalence 0.086)
+Bayes ceiling AUPRC   : 0.114   (irreducible label-noise bound)
+efficiency vs ceiling : 83%
+flag riskiest 1%      : P=0.100  R=0.012  FP/1k-legit=9.9
+flag riskiest 5%      : P=0.090  R=0.052  FP/1k-legit=49.8
 ```
 
-The gap to 1.0 AUPRC is not model weakness — labels are *drawn* from a latent
-probability, so even an oracle ranks at 0.321. TRACER's GBDT reaches 84% of that
-bound by encoding a domain prior as **monotonicity constraints**: risk may never
-decrease as velocity, fan-out or RTO history increase, which blocks the trees
-from memorizing label noise near the decision boundary (+76% test AP vs
-unconstrained training).
+Read that honestly: on a deliberately hostile benchmark (confounder + annotation
+noise), the tabular GBDT reaches 83% of the theoretical ceiling but modest
+absolute lift. **This is exactly why ring detection — which is structural, not
+statistical — is the headline**, and why policy guardrails (hard floors on fan-out
+≥5 devices etc.) guarantee HIGH-band escalation for extreme patterns regardless of
+model output.
 
----
+Real-data validation: `python scripts/train_real_data.py` trains a fresh model on
+the [IEEE-CIS Fraud Detection dataset](https://www.kaggle.com/c/ieee-fraud-detection)
+(download required; the script prints instructions when absent and never invents
+numbers). Results are reported separately, labeled "real-data holdout".
 
-## The Bounded Agent (defense-only)
+### Latency — measured, not invented
 
-The agent is a **state machine, not an LLM with tools**. It can only emit one of
-three whitelisted actions; the LLM never touches funds and only ever fills the
-dispute-dossier JSON schema (validated by Pydantic, template fallback on any error).
+`python scripts/bench_latency.py`, local dev box, single uvicorn process:
 
-| Risk score | Band | Action | UX effect |
-|-----------:|------|--------|-----------|
-| 0 – 30 | LOW | `AUTO_APPROVE` | payment flows instantly |
-| 31 – 70 | MEDIUM | `STEP_UP_AUTHENTICATION` | reversible 2FA OTP challenge |
-| 71 – 100 | HIGH | `PAUSE_PAYOUT_AND_GENERATE_DISPUTE_DOSSIER` | 24h payout hold + evidence pack |
+```
+SEQUENTIAL (n=200) — the per-payment decision path:
+  p50=17.0ms  p95=25.2ms  p99=28.5ms  max=29.1ms
+CONCURRENT (n=600, c=10): throughput 52 req/s (Windows localhost transport ceiling)
+```
 
-## False-positive cost matrix (why this banding is safe)
+Conditions: Windows dev machine, in-memory NetworkX graph, no Redis/Neo4j hops.
+Windows loopback degrades under high connection concurrency even for hello-world
+(verified with a bare Starlette control app); the sequential figure is the
+representative SLA measurement here. Linux/uvloop production numbers will differ.
 
-Real fraud losses are asymmetric: a missed RTO/COD fraud costs the full ticket +
-logistics (~₹18k in our preset), while challenging a genuine customer costs a few
-seconds of friction that *step-up auth converts into a verified sale*.
+## The bounded agent (defense-only)
 
-| Decision | False-positive cost | False-negative cost | Mitigation design |
-|---|---|---|---|
-| `AUTO_APPROVE` | none (flow-through) | ticket lost to fraud later in chain | LOW band requires *all* signals quiet; graph override can still escalate |
-| `STEP_UP` | seconds of friction; ~0 revenue loss | fraudster fails OTP → blocked cheaply | reversible by design; no funds touched |
-| `PAUSE_PAYOUT` | merchant payout delayed ≤24h | chargeback + RTO + logistics loss | hold ≠ cancel: reversible, ledgered, dossier attached for instant human review |
+A state machine, not an LLM with tools. Whitelisted actions only:
 
-Every HIGH decision ships a **SHAP reason-code dossier**, so human reviewers
-adjudicate in seconds instead of minutes — cutting manual review cost while
-keeping humans in command of irreversible actions.
+| Score | Band | Action |
+|---|---|---|
+| 0–30 | LOW | `AUTO_APPROVE` |
+| 31–70 | MEDIUM | `STEP_UP_AUTHENTICATION` (reversible OTP challenge) |
+| 71–100 | HIGH | `PAUSE_PAYOUT_AND_GENERATE_DISPUTE_DOSSIER` (24h hold + evidence pack) |
+
+The system **never** moves, blocks, or retaliates against customer funds beyond a
+reversible platform-side payout pause; there is no offense-capable code path.
+LLM involvement is limited to drafting dossier text inside a strict Pydantic-
+validated schema, from sanitized inputs, with deterministic template fallback.
+
+### False-positive cost framing
+
+At the measured operating points, holding the riskiest 1% of transactions costs
+~10 legitimate holds per 1,000 (~₹1.8L review friction at ₹18.5k avg ticket) to
+catch fraud early in its lifecycle — versus full ticket + logistics loss per
+missed RTO/mule event. Holds are reversible within 24h; step-ups convert genuine
+customers into verified sales. Humans adjudicate anything irreversible.
+
+## Also included (extensions — not headline claims)
+
+- **RTO/COD abuse scoring**: COD + address mismatch + RTO history triggers hard
+  policy floors (80+) independent of the model.
+- **LLM dispute dossiers**: strict-schema evidence packs (GPT-4o-mini or template
+  fallback), reason codes, recommended actions.
+- **Tamper-evident audit ledger**: SHA-256 chained double-entry pairs; O(1)
+  integrity probes at `/healthz`, deep scan at `/api/v1/ledger/stats?deep=true`.
+- **Idempotency middleware**: Redis-backed (in-proc TTL fallback), replay-safe
+  decisions via `X-Idempotency-Key`.
+
+## Security notes
+
+- Webhooks: HMAC-SHA256 verified when `RAZORPAY_WEBHOOK_SECRET` is set; without
+  it responses explicitly report `webhook_signature_verified: false` plus a skip
+  reason (never silently "verified"). Set `RAZORPAY_REQUIRE_WEBHOOK_SECRET=1`
+  in production to reject unsigned traffic outright (403).
+- Prompt injection: all attacker-controlled strings (VPAs, emails, notes) pass a
+  sanitizer before any LLM call — control/zero-width chars stripped, injection
+  markers detected and everything after them dropped, lengths capped; tested in
+  `test_prompt_injection_is_neutralized`.
+- Secrets live in env vars only; nothing is hardcoded or committed.
+
+## Model card (summary)
+
+- **Detects**: device→identity fan-out rings; velocity/new-account bursts;
+  COD-RTO abuse patterns; synthetic-identity conjunctions.
+- **Does not detect**: off-platform collusion with no shared entities; fraud on
+  identifiers we've never seen (cold start); anything requiring cross-merchant
+  data we don't have.
+- **Validated on**: decoupled synthetic GT (see above); IEEE-CIS mapping provided
+  as script; live-API ring-recovery + negative-control tests.
+- **Known failure modes**: heavy label noise caps calibrated confidence (fixed
+  thresholds look sparse by design); confounder leakage if merchant mix shifts;
+  graph features assume identifier stability (rotating devices evade fan-out).
 
 ## Quickstart
 
-### Backend (Python 3.11)
-
 ```bash
-cd backend
-pip install -r requirements.txt
-uvicorn backend.main:app --port 8000
-# first boot trains the XGBoost model (~3s) and caches it to backend/artifacts/
+pip install -r backend/requirements.txt
+uvicorn backend.main:app --port 8000        # docs: /docs · health: /healthz
+
+npm install && npm run dev                  # dashboard on http://localhost:3000
 ```
 
-Interactive docs: http://127.0.0.1:8000/docs · Health: `/healthz`
+Optional env: `TRACER_REDIS_URL`, `TRACER_NEO4J_URI`, `OPENAI_API_KEY`,
+`TRACER_LLM_MODEL`, `RAZORPAY_WEBHOOK_SECRET`, `RAZORPAY_REQUIRE_WEBHOOK_SECRET`,
+`NEXT_PUBLIC_API_BASE`. Full stack: `docker compose up --build`.
 
-### Frontend (Next.js 14)
-
-```bash
-npm install
-npm run dev          # http://localhost:3000
-```
-
-Set `NEXT_PUBLIC_API_BASE` if the API lives elsewhere (default `http://127.0.0.1:8000`).
-
-### Docker Compose (full stack + Redis + Neo4j)
-
-```bash
-docker compose up --build
-# dashboard :3000 · api :8000 · neo4j browser :7474
-```
-
-## Environment variables
-
-| Variable | Default | Purpose |
-|---|---|---|
-| `TRACER_REDIS_URL` | – | Redis-backed idempotency (in-proc TTL fallback) |
-| `RAZORPAY_WEBHOOK_SECRET` | – | HMAC-SHA256 webhook verification |
-| `OPENAI_API_KEY` | – | LLM dossiers (`gpt-4o-mini`); template fallback without |
-| `TRACER_LLM_MODEL` | `gpt-4o-mini` | any OpenAI-compatible chat model |
-| `TRACER_NEO4J_URI` | – | mirror entity graph to Neo4j |
-| `NEXT_PUBLIC_API_BASE` | `127.0.0.1:8000` | API origin for the dashboard |
-
-## Razorpay webhook contract
-
-Accepts test-mode envelopes for `payment.captured`, `order.paid`,
-`dispute.created`. Amounts arrive in **paise** and are normalized to rupees;
-Razorpay `notes.*` fields feed velocity/device context. A `dispute.created`
-event deterministically forces the dossier path. Send one:
-
-```bash
-curl -X POST localhost:8000/api/v1/webhooks/razorpay \
-  -H 'Content-Type: application/json' \
-  -d '{"event":"payment.captured","payload":{"payment":{"id":"pay_T01",
-       "amount":250000,"method":"upi","vpa":"user@ybl",
-       "notes":{"device_id":"DEV-9","customer_id":"c1"}}}}'
-```
-
-## API surface
-
-| Endpoint | Description |
-|---|---|
-| `POST /api/v1/risk/evaluate` | score + bounded action (+ `X-Idempotency-Key` replay support) |
-| `POST /api/v1/webhooks/razorpay` | signed webhook ingestion |
-| `GET  /api/v1/graph/topology?center=dev:X` | ego-graph snapshot for the canvas |
-| `GET  /api/v1/presets` | sandbox presets (mirrors `data/sample_payloads.json`) |
-| `GET  /api/v1/ledger/stats` | entry count + chain verification |
-| `GET  /healthz` | component status + audit-chain integrity |
-
-## Tests
-
-```bash
-python -m pytest backend/tests -q      # 17 tests: bands, idempotency,
-                                       # webhooks/signature, rings, ledger tamper-evidence
-```
-
-## Project layout
-
-```
-app/            Next.js 14 dashboard (components/, globals.css)
-backend/
-  api/v1/       evaluate + razorpay webhooks
-  agents/       bounded state machine + LLM dossier generator
-  core/         engine orchestration, idempotency, hash-chained ledger
-  graph/        NetworkX mule detector (+ embeddings fallback)
-  models/       XGBoost risk core + SHAP-style explainer
-  tests/        pytest suite
-data/           preset payloads, append-only ledger
-```
-
+See [ARCHITECTURE.md](ARCHITECTURE.md) for the component map and the actual file
+tree of this repo.

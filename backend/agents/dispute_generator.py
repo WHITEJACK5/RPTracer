@@ -5,11 +5,18 @@ a compatible gateway) with STRICT JSON output validated against our Pydantic
 schema. Any failure — missing key, timeout, schema violation — deterministically
 falls back to a template dossier assembled from live engine evidence. The agent
 is therefore *bounded*: it can only ever emit the dossier schema.
+
+Attack surface note: attacker-controlled strings (VPA handles, emails, notes)
+are sanitized through _sanitize() BEFORE entering any LLM prompt or evidence
+line — control characters stripped, injection markers neutralized, length
+capped — and travel as JSON data values, never interpolated into instructions.
 """
 from __future__ import annotations
 
 import json
+import re
 import time
+import unicodedata
 import uuid
 from typing import Any
 
@@ -24,6 +31,38 @@ from backend.schemas import (
 
 _LLM_TIMEOUT_S = 6.0
 
+_INJECTION_RE = re.compile(
+    r"(ignore\s+(?:all\s+|any\s+)?(?:the\s+)?(?:above|previous|prior)"
+    r"|system\s*:\s*|assistant\s*:|developer\s*:\s*"
+    r"|#\s*instructions|```\s*(?:system|instructions)"
+    r"|<\|?(?:im_start|system|endoftext)\|?>?)",
+    re.IGNORECASE,
+)
+
+
+def _sanitize(value: Any, max_len: int = 120) -> Any:
+    """Neutralize prompt-injection carriers in user-controlled strings."""
+    if not isinstance(value, str):
+        return value
+    v = unicodedata.normalize("NFKC", value)
+    v = "".join(ch for ch in v if unicodedata.category(ch)[0] != "C")   # controls
+    for zw in ("\u200b", "\u200c", "\u200d", "\u200e", "\u200f", "\ufeff"):
+        v = v.replace(zw, "")
+    # A detected injection marker truncates the remainder of the field: the
+    # marker AND anything after it is attacker-authored by construction.
+    v = _INJECTION_RE.sub("[filtered]", v, count=1).split("[filtered]", 1)[0] \
+        if _INJECTION_RE.search(v) else v
+    v = _INJECTION_RE.sub("[filtered]", v)
+    return v[:max_len]
+
+
+def _deep_sanitize(obj: Any) -> Any:
+    if isinstance(obj, dict):
+        return {k: _deep_sanitize(v) for k, v in obj.items()}
+    if isinstance(obj, list):
+        return [_deep_sanitize(v) for v in obj]
+    return _sanitize(obj)
+
 
 def _template_dossier(
     ev: TransactionEvent,
@@ -33,13 +72,17 @@ def _template_dossier(
 ) -> DisputeDossier:
     codes = compute_reason_codes({}, {"mule_ring_score": graph.ring_confidence * 100}) \
         if not shap else [c.feature.upper() for c in shap[:4]]
+    vpa = _sanitize(ev.instrument.vpa or "—")
+    email = _sanitize(ev.context.email or "")
+    device = _sanitize(ev.context.device_id or "—")
+    ip_addr = _sanitize(ev.context.ip or "—")
     evidence = [
-        f"Transaction {ev.event_id}: ₹{ev.amount:,.2f} via "
+        f"Transaction {_sanitize(ev.event_id)}: ₹{ev.amount:,.2f} via "
         f"{ev.instrument.method.upper()} at {time.strftime('%Y-%m-%d %H:%M IST', time.localtime(ev.timestamp_ms / 1000))}",
-        f"Customer {ev.customer.id} · account age {ev.customer.account_age_days} days · "
+        f"Customer {_sanitize(ev.customer.id)} · account age {ev.customer.account_age_days} days · "
         f"historical RTO rate {ev.customer.rto_rate_history:.0%}",
-        f"Instrument: VPA={ev.instrument.vpa or '—'} card_fp={ev.instrument.card_fingerprint or '—'}",
-        f"Network: device {ev.context.device_id or '—'} · IP {ev.context.ip or '—'} · "
+        f"Instrument: VPA={vpa} card_fp={_sanitize(ev.instrument.card_fingerprint or '—')}",
+        f"Network: device {device} · IP {ip_addr} · "
         f"graph component of {graph.component_size} entities · fan-out {graph.shared_device_vpas}",
         f"Risk score {score}/100 with SHAP attribution from GBDT model (see reason codes)",
     ]
@@ -79,8 +122,8 @@ def _llm_prompt(ev: TransactionEvent, score: int,
         "recommended_actions: string[4], regulatory_note: str}. Be factual, terse, "
         "compliance-safe. Never invent data absent from the provided context."
     )
-    user = json.dumps({
-        "event": ev.model_dump(),
+    user = json.dumps({                       # data values only — never instruction text
+        "event": _deep_sanitize(ev.model_dump(mode="json")),
         "risk_score": score,
         "top_factors": [{"f": s.feature, "push": s.contribution} for s in shap],
         "graph_evidence": graph.model_dump(),

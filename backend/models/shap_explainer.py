@@ -34,7 +34,7 @@ _LABELS: dict[str, str] = {
     "rto_rate": "Historical Return-to-Origin rate",
     "night_hour": "Odd-hour transaction (00:00–05:00)",
     "disposable_email": "Disposable email domain",
-    "mule_confidence": "Mule-ring topology match (GraphSAGE)",
+    "mule_confidence": "Mule-ring topology match (graph heuristics)",
 }
 
 _VALUE_FORMATTERS: dict[str, Any] = {
@@ -69,21 +69,24 @@ def explain(final_score: int, feats: dict[str, float], top_k: int = 7) -> list[S
 
 def reason_codes(feats: dict[str, float], gs: dict[str, float]) -> list[str]:
     """Compact machine-readable codes consumed by the dispute dossier."""
+    f = {k: feats.get(k, 0.0) for k in
+         ("device_fan_out", "is_cod", "address_mismatch", "rto_rate",
+          "disposable_email", "account_newness", "txn_rate_24h", "night_hour")}
     codes: list[str] = []
     if gs.get("mule_ring_score", 0) >= 70:
         codes.append("GRAPH_MULE_RING")
-    if feats["device_fan_out"] >= 0.33:
+    if f["device_fan_out"] >= 0.33:
         codes.append("DEVICE_FAN_OUT")
-    if feats["is_cod"] and feats["address_mismatch"]:
+    if f["is_cod"] and f["address_mismatch"]:
         codes.append("COD_ADDRESS_MISMATCH")
-    if feats["rto_rate"] >= 0.45:
+    if f["rto_rate"] >= 0.45:
         codes.append("HIGH_RTO_HISTORY")
-    if feats["disposable_email"]:
+    if f["disposable_email"]:
         codes.append("DISPOSABLE_EMAIL")
-    if feats["account_newness"] >= 0.9:
+    if f["account_newness"] >= 0.9:
         codes.append("NEW_ACCOUNT_BURST")
-    if feats["txn_rate_24h"] >= 0.6:
+    if f["txn_rate_24h"] >= 0.6:
         codes.append("VELOCITY_ANOMALY")
-    if feats["night_hour"]:
+    if f["night_hour"]:
         codes.append("ODD_HOUR")
     return codes or ["LOW_SIGNAL_PROFILE"]

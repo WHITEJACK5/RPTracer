@@ -23,6 +23,9 @@ ANTHROPIC_API_KEY: str | None = os.getenv("ANTHROPIC_API_KEY")
 LLM_MODEL: str = os.getenv("TRACER_LLM_MODEL", "gpt-4o-mini")
 
 RAZORPAY_WEBHOOK_SECRET: str | None = os.getenv("RAZORPAY_WEBHOOK_SECRET")
+# Production posture: when true, webhooks are REJECTED (403) if no secret is
+# configured. Dev/demo default is false so local testing works out of the box.
+REQUIRE_WEBHOOK_SECRET: bool = os.getenv("RAZORPAY_REQUIRE_WEBHOOK_SECRET", "0") == "1"
 
 IDEMPOTENCY_TTL_SECONDS: int = int(os.getenv("TRACER_IDEMPOTENCY_TTL", "600"))
 

@@ -6,6 +6,13 @@ Every risk decision writes a balanced pair of entries:
 
 Entries are chained with SHA-256(prev_hash || canonical_entry) so any
 tampering is detectable. The file is opened in append mode only.
+
+Integrity model
+---------------
+* Boot: the pre-existing file is fully re-hashed ONCE (O(filesize)).
+* Appends extend the in-memory head; each write updates entry count.
+* `state()` reports live integrity in O(1) - safe to call from /healthz on
+  every probe. `verify_chain()` remains available for explicit deep scans.
 """
 from __future__ import annotations
 
@@ -27,45 +34,13 @@ class AuditLedger:
     def __init__(self, path: Path) -> None:
         self.path = path
         self.path.parent.mkdir(parents=True, exist_ok=True)
-        self._prev_hash = self._load_last_hash()
+        self._prev_hash = "GENESIS"
+        self._entries = 0
+        # full scan of any pre-existing file exactly once at construction
+        self._boot_intact = self._load_and_verify()
 
-    def _load_last_hash(self) -> str:
-        if not self.path.exists():
-            return "GENESIS"
-        last = "GENESIS"
-        with self.path.open("r", encoding="utf-8") as fh:
-            for line in fh:
-                line = line.strip()
-                if line:
-                    try:
-                        last = json.loads(line).get("hash", last)
-                    except json.JSONDecodeError:
-                        continue
-        return last
-
-    def append(self, debit_account: str, credit_account: str,
-               amount: float, refs: dict[str, Any]) -> str:
-        """Write one balanced double-entry pair; returns the entry hash."""
-        ts = int(time.time() * 1000)
-        entries = [
-            {"side": "DEBIT", "account": debit_account, "amount": round(amount, 2), "ts_ms": ts, **refs},
-            {"side": "CREDIT", "account": credit_account, "amount": round(amount, 2), "ts_ms": ts, **refs},
-        ]
-        with _LOCK:
-            head = self._prev_hash
-            final_hash = ""
-            for entry in entries:
-                digest = hashlib.sha256(f"{head}{_canonical(entry)}".encode()).hexdigest()
-                record = {**entry, "prev_hash": head, "hash": digest}
-                with self.path.open("a", encoding="utf-8") as fh:
-                    fh.write(_canonical(record) + "\n")
-                head = digest
-                final_hash = digest
-            self._prev_hash = head
-        return final_hash
-
-    def verify_chain(self) -> bool:
-        """Recompute the full chain; returns True when tamper-free."""
+    def _load_and_verify(self) -> bool:
+        ok = True
         head = "GENESIS"
         if not self.path.exists():
             return True
@@ -74,14 +49,56 @@ class AuditLedger:
                 line = line.strip()
                 if not line:
                     continue
-                rec = json.loads(line)
-                body = {k: v for k, v in rec.items() if k not in ("hash",)}
+                try:
+                    rec = json.loads(line)
+                except json.JSONDecodeError:
+                    ok = False
+                    continue
+                body = {k: v for k, v in rec.items() if k != "hash"}
                 prev = body.pop("prev_hash", None)
                 expected = hashlib.sha256(f"{head}{_canonical(body)}".encode()).hexdigest()
                 if prev != head or rec.get("hash") != expected:
-                    return False
-                head = rec["hash"]
-        return True
+                    ok = False
+                head = rec.get("hash", head)
+                self._entries += 1
+        self._prev_hash = head
+        return ok
+
+    def append(self, debit_account: str, credit_account: str,
+               amount: float, refs: dict[str, Any]) -> str:
+        """Write one balanced double-entry pair; returns the chain head hash."""
+        ts = int(time.time() * 1000)
+        entries = [
+            {"side": "DEBIT", "account": debit_account, "amount": round(amount, 2), "ts_ms": ts, **refs},
+            {"side": "CREDIT", "account": credit_account, "amount": round(amount, 2), "ts_ms": ts, **refs},
+        ]
+        with _LOCK:
+            head = self._prev_hash
+            lines: list[str] = []
+            for entry in entries:
+                digest = hashlib.sha256(f"{head}{_canonical(entry)}".encode()).hexdigest()
+                record = {**entry, "prev_hash": head, "hash": digest}
+                lines.append(_canonical(record))
+                head = digest
+            # single open/append/close per decision - keeps the hot path fast
+            with self.path.open("a", encoding="utf-8") as fh:
+                fh.write("\n".join(lines) + "\n")
+            self._prev_hash = head
+            self._entries += len(entries)
+        return head
+
+    def state(self) -> dict[str, Any]:
+        """O(1) live integrity snapshot - safe for health probes."""
+        return {
+            "intact": self._boot_intact,          # False forever once tamper seen
+            "entries": self._entries,
+            "head": self._prev_hash[:16],
+        }
+
+    def verify_chain(self) -> bool:
+        """Deep re-scan of the whole file (ops tooling, tests)."""
+        self._boot_intact = self._load_and_verify()
+        return self._boot_intact
 
 
 _ledger: AuditLedger | None = None
