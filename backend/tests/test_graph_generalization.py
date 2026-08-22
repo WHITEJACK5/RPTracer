@@ -49,6 +49,42 @@ def test_mule_ring_detected_for_novel_device_never_seeded(client: TestClient):
     ).json()["graph_evidence"]["ring_confidence"] >= 0.72
 
 
+def test_card_share_feature_not_silently_zero(client):
+    """Regression: prefix mismatch ('fp:' vs 'card:') used to zero card_share."""
+    from backend.graph.mule_detector import get_detector
+    from backend.schemas import TransactionEvent
+
+    ev = TransactionEvent.model_validate({
+        "event_id": "cardshare_1", "amount": 45000.0,
+        "instrument": {"method": "upi", "vpa": "fraudvpa07@ybl",
+                       "card_fingerprint": "FP-MULE-1"},
+        "customer": {"id": "cust_cs", "account_age_days": 3},
+        "context": {"device_id": "DEV-MULE-RING-01", "ip": "203.0.113.7"}})
+    _, gs = get_detector().observe(ev)
+    assert gs["device_fan_out"] >= 15          # 14 seeded VPAs + shared cards
+    assert gs["card_share"] >= 3               # FP-MULE-1 links several identities
+
+
+def test_topology_center_resolution_is_forgiving():
+    """dev:/device:/bare-id must all resolve to the same node — even after
+    unrelated events poison the last-event fallback."""
+    from backend.graph.mule_detector import get_detector
+    from backend.schemas import TransactionEvent
+
+    det = get_detector()
+    # poison the fallback with an unrelated benign event first
+    det.observe(TransactionEvent.model_validate({
+        "event_id": "poison_1", "amount": 999.0,
+        "instrument": {"method": "upi", "vpa": "unrelated.poison@upi"},
+        "context": {"device_id": "DEV-POISON-XX", "ip": "10.9.9.9"}}))
+
+    a = det.topology(center="device:DEV-MULE-RING-01")
+    b = det.topology(center="dev:DEV-MULE-RING-01")
+    c = det.topology(center="DEV-MULE-RING-01")
+    assert a["center"] == b["center"] == c["center"] == "device:DEV-MULE-RING-01"
+    assert len(a["nodes"]) == len(c["nodes"]) > 10
+
+
 def test_benign_family_fanout_does_not_trigger_ring(client: TestClient):
     """Negative control: one household device across 2-3 VPAs is NOT a ring.
 

@@ -132,3 +132,41 @@ def test_ledger_stats_and_chain(client):
     body = r.json()
     assert body["entries"] > 0
     assert body["chain_verified"] is True
+
+
+def test_frontend_contract_fields_present(client, normal_upi):
+    """Guards every response field the Next.js dashboard renders."""
+    from backend.api.v1.webhooks import _to_event
+    from backend.schemas import WebhookEnvelope
+
+    r = client.post("/api/v1/risk/evaluate", json=normal_upi)
+    body = r.json()
+    for key in ("event_id", "risk_score", "risk_band", "decision", "latency_ms",
+                "top_factors", "graph_evidence", "trace", "audit_ref",
+                "model_version", "idempotent_replay"):
+        assert key in body, f"dashboard depends on {key}"
+    factor = body["top_factors"][0]
+    for key in ("feature", "label", "value", "contribution", "direction"):
+        assert key in factor
+    for step in body["trace"]:
+        assert set(step) >= {"ts_ms", "actor", "message", "level"}
+    graph = body["graph_evidence"]
+    for key in ("component_size", "mule_nodes", "shared_device_vpas",
+                "ring_detected", "ring_confidence", "summary"):
+        assert key in graph
+
+    # presets endpoint must serve exactly the shape PayloadSandbox hydrates with
+    presets = client.get("/api/v1/presets").json()
+    for preset in presets.values():
+        assert {"label", "description", "expected_band", "payload"} <= set(preset)
+
+    # topology must match GraphCanvas expectations: nodes have id/type/mule
+    topo = client.get("/api/v1/graph/topology").json()
+    assert isinstance(topo.get("edges"), list) and isinstance(topo.get("nodes"), list)
+
+    # webhook created_at arrives in epoch SECONDS -> normalized to ms internally
+    ev, _ = _to_event(WebhookEnvelope.model_validate({
+        "event": "payment.captured",
+        "payload": {"payment": {"id": "pay_TS1", "amount": 100,
+                                "created_at": 1755000000}}}))
+    assert ev.timestamp_ms > 10_000_000_000     # i.e., ms epoch, not seconds

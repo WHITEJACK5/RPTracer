@@ -6,6 +6,7 @@ hash-chained audit ledger, then serve the bounded-agent API.
 from __future__ import annotations
 
 import time
+from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
@@ -23,18 +24,6 @@ _BOOT_T0 = time.time()
 
 
 def create_app() -> FastAPI:
-    app = FastAPI(
-        title="TRACER v1.0 — AI Risk Manager",
-        description="Razorpay AI Buildathon 2026 · Track 2 · defense-only autonomous merchant protection",
-        version="1.0.0",
-    )
-    app.add_middleware(CORSMiddleware, allow_origins=CORS_ORIGINS,
-                       allow_credentials=True, allow_methods=["*"], allow_headers=["*"])
-    app.add_middleware(IdempotencyMiddleware)
-    app.include_router(evaluate_router)
-    app.include_router(webhook_router)
-
-    @app.on_event("startup")
     async def _warm() -> None:
         DATA_DIR.mkdir(parents=True, exist_ok=True)
         get_ledger(LEDGER_PATH)          # opens/creates append-only ledger
@@ -45,6 +34,35 @@ def create_app() -> FastAPI:
         await run_pipeline(              # warm threadpools / caches before traffic
             TransactionEvent(event_id="warmup", amount=1499)
         )
+        # precompute the honest-metrics card off-thread so the first
+        # /api/v1/model/report request never stalls (~4k predictions otherwise)
+        import threading
+
+        def _report() -> None:
+            try:
+                from backend.models.report import get_report
+                get_report()
+            except Exception:
+                pass                     # report is best-effort, never boot-critical
+
+        threading.Thread(target=_report, daemon=True).start()
+
+    @asynccontextmanager
+    async def lifespan(_: FastAPI):
+        await _warm()
+        yield
+
+    app = FastAPI(
+        title="TRACER v1.0 — AI Risk Manager",
+        description="Razorpay AI Buildathon 2026 · Track 2 · defense-only autonomous merchant protection",
+        version="1.0.0",
+        lifespan=lifespan,
+    )
+    app.add_middleware(CORSMiddleware, allow_origins=CORS_ORIGINS,
+                       allow_credentials=True, allow_methods=["*"], allow_headers=["*"])
+    app.add_middleware(IdempotencyMiddleware)
+    app.include_router(evaluate_router)
+    app.include_router(webhook_router)
 
     @app.get("/healthz", tags=["ops"])
     def healthz() -> dict:
@@ -65,9 +83,9 @@ def create_app() -> FastAPI:
     @app.post("/api/v1/graph/reset-demo", tags=["risk"])
     def reset_demo_graph() -> dict:
         detector = get_detector()
-        detector.__init__()              # re-seed deterministic demo history
-        return {"reseeded": True, **{"nodes": detector.g.number_of_nodes(),
-                                     "edges": detector.g.number_of_edges()}}
+        detector.reseed()                # rebuild deterministic demo history
+        return {"reseeded": True, "nodes": detector.g.number_of_nodes(),
+                "edges": detector.g.number_of_edges()}
 
     @app.get("/api/v1/presets", tags=["sandbox"])
     def presets() -> dict:

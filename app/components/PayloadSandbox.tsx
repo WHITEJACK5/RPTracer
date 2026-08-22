@@ -1,51 +1,83 @@
 "use client";
 
-import { useState } from "react";
-import { PRESETS, type PresetKey } from "@/lib/api";
+import { useEffect, useState } from "react";
+import { PRESETS } from "@/lib/api";
+import type { Preset } from "@/lib/types";
 
-const PRESET_META: Record<PresetKey, { accent: string; tag: string }> = {
-  normal_upi: { accent: "#00d4aa", tag: "UPI · CLEAN" },
-  rto_cod: { accent: "#f97316", tag: "COD · RTO" },
-  mule_ring: { accent: "#ef4444", tag: "GRAPH · RING" },
-  synthetic_id: { accent: "#a855f7", tag: "IDENTITY" },
+const ACCENTS: Record<string, string> = {
+  normal_upi: "#00d4aa",
+  rto_cod: "#f97316",
+  mule_ring: "#ef4444",
+  synthetic_id: "#a855f7",
 };
 
-const ICONS: Record<PresetKey, JSX.Element> = {
-  normal_upi: (
-    <path d="M12 3l7 4v5c0 4.5-3 7.5-7 9-4-1.5-7-4.5-7-9V7l7-4z" strokeWidth="1.6" />
-  ),
-  rto_cod: (
-    <><rect x="3" y="8" width="13" height="10" rx="1.5" strokeWidth="1.6" />
-      <path d="M16 11h3l2 2.5V18h-5" strokeWidth="1.6" />
-      <circle cx="7" cy="19" r="1.6" /><circle cx="17.5" cy="19" r="1.6" /></>
-  ),
-  mule_ring: (
-    <><circle cx="12" cy="12" r="2.2" /><circle cx="12" cy="4.5" r="1.8" /><circle cx="4.5" cy="14" r="1.8" />
-      <circle cx="19.5" cy="14" r="1.8" /><circle cx="8" cy="20" r="1.8" /><circle cx="16" cy="20" r="1.8" />
-      <path d="M12 6.3v3.5M10.2 13L6 13.6M13.8 13l4.2.6M10.8 14l-1.8 4M13.2 14l1.8 4" /></>
-  ),
-  synthetic_id: (
-    <><path d="M12 3a9 9 0 019 9M12 7a5 5 0 015 5M12 11a1 1 0 011 1" strokeWidth="1.7" strokeLinecap="round" />
-      <path d="M21 17.5A9 9 0 013 12" strokeWidth="1.7" strokeLinecap="round" opacity="0.5" />
-      <path d="M3 12a9 9 0 019-9" strokeWidth="0" /></>
-  ),
+const TAGS: Record<string, string> = {
+  normal_upi: "UPI · CLEAN",
+  rto_cod: "COD · RTO",
+  mule_ring: "GRAPH · RING",
+  synthetic_id: "IDENTITY",
 };
+
+function Icon({ d }: { d: string }) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"
+         className="h-5 w-5 shrink-0" strokeLinecap="round" strokeLinejoin="round"
+         dangerouslySetInnerHTML={{ __html: d }} />
+  );
+}
+
+const ICON_PATHS: Record<string, string> = {
+  normal_upi: `<path d="M12 3l7 4v5c0 4.5-3 7.5-7 9-4-1.5-7-4.5-7-9V7l7-4z" stroke-width="1.6"/>`,
+  rto_cod: `<rect x="3" y="8" width="13" height="10" rx="1.5" stroke-width="1.6"/>
+    <path d="M16 11h3l2 2.5V18h-5" stroke-width="1.6"/>
+    <circle cx="7" cy="19" r="1.6"/><circle cx="17.5" cy="19" r="1.6"/>`,
+  mule_ring: `<circle cx="12" cy="12" r="2.2"/><circle cx="12" cy="4.5" r="1.8"/>
+    <circle cx="4.5" cy="14" r="1.8"/><circle cx="19.5" cy="14" r="1.8"/>
+    <circle cx="8" cy="20" r="1.8"/><circle cx="16" cy="20" r="1.8"/>
+    <path d="M12 6.3v3.5M10.2 13L6 13.6M13.8 13l4.2.6M10.8 14l-1.8 4M13.2 14l1.8 4"/>`,
+  synthetic_id: `<path d="M12 3a9 9 0 019 9M12 7a5 5 0 015 5M12 11a1 1 0 011 1" stroke-width="1.7"/>
+    <path d="M21 17.5A9 9 0 013 12" stroke-width="1.7" opacity="0.5"/>
+    <circle cx="12" cy="12" r="3.2" stroke-width="1.4"/>`,
+};
+const FALLBACK_ICON = `<path d="M12 3l7 4v5c0 4.5-3 7.5-7 9-4-1.5-7-4.5-7-9V7l7-4z" stroke-width="1.6"/>`;
 
 export default function PayloadSandbox({
+  presets,
   onEvaluate,
   evaluating,
 }: {
+  /** hydrated from GET /api/v1/presets when reachable; bundled copy otherwise */
+  presets: Record<string, Preset>;
   onEvaluate: (payload: object) => Promise<void>;
   evaluating: boolean;
 }) {
-  const [activeKey, setActiveKey] = useState<PresetKey | null>("normal_upi");
-  const [text, setText] = useState(() => JSON.stringify(PRESETS.normal_upi.payload, null, 2));
+  const [activeKey, setActiveKey] = useState<string | null>("normal_upi");
+  const [text, setText] = useState(
+    () =>
+      JSON.stringify(
+        (presets ?? PRESETS)[Object.keys(presets ?? PRESETS)[0]]?.payload ??
+          PRESETS.normal_upi.payload,
+        null,
+        2
+      )
+  );
   const [error, setError] = useState<string | null>(null);
+  const [source, setSource] = useState<"api" | "bundled">("bundled");
 
-  function selectPreset(key: PresetKey) {
+  // re-sync editor when the backend-provided preset pack arrives
+  useEffect(() => {
+    if (presets && Object.keys(presets).length) {
+      setSource("api");
+      const firstKey = Object.keys(presets)[0];
+      setActiveKey(firstKey);
+      setText(JSON.stringify(presets[firstKey].payload, null, 2));
+    }
+  }, [presets]);
+
+  function selectPreset(key: string) {
     setActiveKey(key);
     setError(null);
-    setText(JSON.stringify(PRESETS[key].payload, null, 2));
+    setText(JSON.stringify((presets[key] ?? PRESETS[key]).payload, null, 2));
   }
 
   async function send() {
@@ -64,12 +96,15 @@ export default function PayloadSandbox({
         <h2 className="font-grotesk text-sm font-semibold tracking-widest text-white/50">
           PAYLOAD SANDBOX
         </h2>
-        <span className="font-mono text-[10px] text-white/35">POST /api/v1/risk/evaluate</span>
+        <span className="font-mono text-[10px] text-white/35">
+          POST /api/v1/risk/evaluate
+        </span>
       </div>
 
       <div className="grid grid-cols-2 gap-2">
-        {(Object.keys(PRESETS) as PresetKey[]).map((key) => {
-          const meta = PRESET_META[key];
+        {Object.entries(presets).map(([key, preset]) => {
+          const accent = ACCENTS[key] ?? "#00d4aa";
+          const tag = TAGS[key] ?? key.toUpperCase();
           const active = activeKey === key;
           return (
             <button
@@ -78,19 +113,18 @@ export default function PayloadSandbox({
               className={`group rounded-xl border px-3 py-2.5 text-left transition-all duration-200 ${
                 active ? "bg-white/[0.05]" : "border-line bg-white/[0.02] hover:bg-white/[0.045]"
               }`}
-              style={active ? { borderColor: `${meta.accent}66`, boxShadow: `0 0 18px -6px ${meta.accent}88` } : undefined}
+              style={active ? { borderColor: `${accent}66`, boxShadow: `0 0 18px -6px ${accent}88` } : undefined}
             >
               <div className="flex items-center gap-2">
-                <svg viewBox="0 0 24 24" fill="none" stroke={meta.accent} className="h-5 w-5 shrink-0"
-                     strokeLinecap="round" strokeLinejoin="round">
-                  {ICONS[key]}
-                </svg>
+                <span style={{ color: accent }}>
+                  <Icon d={ICON_PATHS[key] ?? FALLBACK_ICON} />
+                </span>
                 <div className="min-w-0">
                   <p className="truncate font-grotesk text-[13px] font-semibold text-white/90">
-                    {PRESETS[key].label}
+                    {preset.label}
                   </p>
-                  <p className="font-mono text-[9px] tracking-wider" style={{ color: meta.accent }}>
-                    {meta.tag} → {PRESETS[key].expected_band}
+                  <p className="truncate font-mono text-[9px] tracking-wider" style={{ color: accent }}>
+                    {tag} → {preset.expected_band}
                   </p>
                 </div>
               </div>
@@ -99,7 +133,9 @@ export default function PayloadSandbox({
         })}
       </div>
 
-      <p className="mt-3 text-xs leading-relaxed text-white/45">{activeKey && PRESETS[activeKey].description}</p>
+      <p className="mt-3 text-xs leading-relaxed text-white/45">
+        {activeKey ? presets[activeKey]?.description : "Custom payload — edit and run."}
+      </p>
 
       <textarea
         value={text}
@@ -143,6 +179,10 @@ export default function PayloadSandbox({
           )}
         </span>
       </button>
+
+      <p className="mt-2 text-right font-mono text-[9px] tracking-wider text-white/25">
+        presets: {source === "api" ? "GET /api/v1/presets" : "bundled fallback"}
+      </p>
     </section>
   );
 }

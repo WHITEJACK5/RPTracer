@@ -14,6 +14,7 @@ capped — and travel as JSON data values, never interpolated into instructions.
 from __future__ import annotations
 
 import json
+import os
 import re
 import time
 import unicodedata
@@ -144,28 +145,51 @@ def generate_dossier(
         import httpx
 
         user_msg, system = _llm_prompt(ev, score, shap, graph)
-        headers = {"Authorization": f"Bearer {OPENAI_API_KEY}"}
-        resp = httpx.post(
-            "https://api.openai.com/v1/chat/completions",
-            headers=headers,
-            json={
-                "model": LLM_MODEL,
-                "messages": [{"role": "system", "content": system}, user_msg],
-                "response_format": {"type": "json_object"},
-                "temperature": 0.2,
-            },
-            timeout=_LLM_TIMEOUT_S,
-        )
-        resp.raise_for_status()
-        payload = json.loads(resp.json()["choices"][0]["message"]["content"])
-        return DisputeDossier(
-            **{**base.model_dump(),
-               "title": payload["title"],
-               "executive_summary": payload["executive_summary"],
-               "evidence": payload["evidence"],
-               "recommended_actions": payload["recommended_actions"],
-               "regulatory_note": payload.get("regulatory_note", base.regulatory_note),
-               "generated_by": "llm"}
-        )
+        if ANTHROPIC_API_KEY and not OPENAI_API_KEY:
+            resp = httpx.post(
+                "https://api.anthropic.com/v1/messages",
+                headers={"x-api-key": ANTHROPIC_API_KEY,
+                         "anthropic-version": "2023-06-01"},
+                json={
+                    "model": os.getenv("TRACER_ANTHROPIC_MODEL", "claude-3-haiku-20240307"),
+                    "max_tokens": 900,
+                    "system": system + "\nRespond with ONLY the JSON object.",
+                    "messages": [{"role": "user", "content": user_msg["content"]}],
+                },
+                timeout=_LLM_TIMEOUT_S,
+            )
+            resp.raise_for_status()
+            raw = resp.json()["content"][0]["text"]
+        else:
+            headers = {"Authorization": f"Bearer {OPENAI_API_KEY}"}
+            resp = httpx.post(
+                "https://api.openai.com/v1/chat/completions",
+                headers=headers,
+                json={
+                    "model": LLM_MODEL,
+                    "messages": [{"role": "system", "content": system}, user_msg],
+                    "response_format": {"type": "json_object"},
+                    "temperature": 0.2,
+                },
+                timeout=_LLM_TIMEOUT_S,
+            )
+            resp.raise_for_status()
+            raw = resp.json()["choices"][0]["message"]["content"]
+        payload = json.loads(raw)
+        return _merge_dossier(base, payload)
     except Exception:
         return base                      # bounded fallback: template dossier
+
+
+def _merge_dossier(base: DisputeDossier, payload: dict) -> DisputeDossier:
+    """Strict merge: only schema fields cross the boundary; anything the model
+    invents beyond them is dropped (bounded output)."""
+    return DisputeDossier(
+        **{**base.model_dump(),
+           "title": str(payload["title"]),
+           "executive_summary": str(payload["executive_summary"]),
+           "evidence": [str(e) for e in payload["evidence"]][:8],
+           "recommended_actions": [str(a) for a in payload["recommended_actions"]][:8],
+           "regulatory_note": str(payload.get("regulatory_note", base.regulatory_note)),
+           "generated_by": "llm"}
+    )

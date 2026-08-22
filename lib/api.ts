@@ -3,8 +3,10 @@ import type { Preset } from "./types";
 export const API_BASE =
   process.env.NEXT_PUBLIC_API_BASE ?? "http://127.0.0.1:8000";
 
-export async function evaluateRisk(payload: object): Promise<Response> {
-  return fetch(`${API_BASE}/api/v1/risk/evaluate`, {
+export async function evaluateRisk(
+  payload: object
+): Promise<{ data: import("./types").RiskEvaluation; replay: boolean }> {
+  const res = await fetch(`${API_BASE}/api/v1/risk/evaluate`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -12,6 +14,23 @@ export async function evaluateRisk(payload: object): Promise<Response> {
     },
     body: JSON.stringify(payload),
   });
+  const data = await res.json();
+  if (!res.ok) {
+    throw new Error(String(data?.detail ?? `${res.status} ${res.statusText}`));
+  }
+  return { data, replay: res.headers.get("X-Idempotent-Replay") === "true" };
+}
+
+export async function fetchPresets(): Promise<Record<string, Preset> | null> {
+  try {
+    const res = await fetch(`${API_BASE}/api/v1/presets`);
+    if (!res.ok) throw new Error();
+    const body = await res.json();
+    // backend serves {key: {label, description, expected_band, payload}}
+    return Object.keys(body).length ? (body as Record<string, Preset>) : null;
+  } catch {
+    return null;                       // offline: fall back to bundled copy
+  }
 }
 
 export async function fetchTopology(center?: string) {

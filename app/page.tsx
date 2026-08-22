@@ -7,8 +7,8 @@ import RiskGauge from "./components/RiskGauge";
 import AgentTerminal from "./components/AgentTerminal";
 import GraphCanvas from "./components/GraphCanvas";
 import DisputeDossierModal from "./components/DisputeDossierModal";
-import { evaluateRisk } from "@/lib/api";
-import type { RiskEvaluation } from "@/lib/types";
+import { evaluateRisk, fetchPresets, PRESETS } from "@/lib/api";
+import type { Preset, RiskEvaluation } from "@/lib/types";
 
 export default function Page() {
   const [result, setResult] = useState<RiskEvaluation | null>(null);
@@ -18,18 +18,25 @@ export default function Page() {
   const [topoRefresh, setTopoRefresh] = useState(0);
   const [dossierOpen, setDossierOpen] = useState(false);
   const [apiError, setApiError] = useState<string | null>(null);
+  const [presets, setPresets] = useState<Record<string, Preset>>(PRESETS);
+
+  // single source of truth: hydrate sandbox presets from the backend
+  useEffect(() => {
+    let alive = true;
+    fetchPresets().then((p) => {
+      if (alive && p) setPresets(p);
+    });
+    return () => {
+      alive = false;
+    };
+  }, []);
 
   const handleEvaluate = useCallback(async (payload: object) => {
     setEvaluating(true);
     setApiError(null);
     try {
-      const res = await evaluateRisk(payload);
-      if (!res.ok) {
-        const body = await res.json().catch(() => ({}));
-        throw new Error(String((body as { detail?: string }).detail ?? `${res.status} ${res.statusText}`));
-      }
-      const data: RiskEvaluation = await res.json();
-      setResult(data);
+      const { data, replay } = await evaluateRisk(payload);
+      setResult({ ...data, idempotent_replay: replay });
       setDossierOpen(Boolean(data.dispute_dossier));
       const ctx = (payload as { context?: { device_id?: string } }).context;
       setTopoCenter(ctx?.device_id ?? null);
@@ -89,7 +96,7 @@ export default function Page() {
 
         {/* Dashboard grid */}
         <div className="grid gap-4 lg:grid-cols-[400px_minmax(0,1fr)]">
-          <PayloadSandbox onEvaluate={handleEvaluate} evaluating={evaluating} />
+          <PayloadSandbox presets={presets} onEvaluate={handleEvaluate} evaluating={evaluating} />
 
           <div className="flex min-w-0 flex-col gap-4">
             <div className="grid gap-4 xl:grid-cols-[minmax(320px,400px)_minmax(0,1fr)]">

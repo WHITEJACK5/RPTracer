@@ -54,10 +54,16 @@ def _to_event(envelope: WebhookEnvelope) -> tuple[TransactionEvent, bool]:
               else EventType.PAYMENT_CAPTURED)
     force_high = event_type is EventType.DISPUTE_CREATED
 
+    created = p.get("created_at")
+    if isinstance(created, (int, float)) and created < 100_000_000_000:
+        created *= 1000                     # Razorpay sends epoch SECONDS
+    elif not isinstance(created, (int, float)):
+        created = time.time() * 1000
+
     ev = TransactionEvent(
         event_id=str(p.get("id") or d.get("id") or f"wh_{uuid.uuid4().hex[:10]}"),
         event_type=event_type,
-        timestamp_ms=int(p.get("created_at") or time.time() * 1000),
+        timestamp_ms=int(created),
         merchant_id=str(p.get("merchant_id") or "merchant_demo"),
         amount=round(amount, 2),
         currency=str(p.get("currency") or "INR"),

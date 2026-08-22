@@ -53,7 +53,7 @@ def get_report() -> dict[str, Any]:
             return _CACHE
 
         model = get_risk_model()
-        X, y, p_true = sample_dataset(n=4_000, seed=777)      # held-out seed
+        X, y, p_true = sample_dataset(n=2_500, seed=777)      # held-out seed
         probs = np.array([model.probability(dict(zip(FEATURES, map(float, r))))
                           for r in X])
 

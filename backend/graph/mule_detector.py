@@ -78,12 +78,20 @@ class MuleDetector:
             self._link(d, v)
             self._link(v, self._add("customer", f"CUST-FAM-{k}"))
 
+    def reseed(self) -> None:
+        """Rebuild the deterministic demo history (sandbox reset endpoint)."""
+        with self._lock:
+            self.g = nx.Graph()
+            self._last_entities = []
+            self._cached_score = 0
+            self._seed_history()
+
     # ------------------------------------------------------------- ingestion
     def observe(self, ev: TransactionEvent) -> tuple[GraphEvidence, dict[str, Any]]:
         """Ingest event entities then analyze; returns evidence + stats."""
         with self._lock:
             touched = self._ingest(ev)
-            primary = next((n for n in touched if n.startswith("dev:")), None) \
+            primary = next((n for n in touched if n.startswith("device:")), None) \
                 or (touched[0] if touched else None)
             if primary is None:
                 empty = GraphEvidence(summary="no linkable entities")
@@ -112,9 +120,9 @@ class MuleDetector:
                                 self.g.nodes[nb]["mule"] = True
                                 mule_nodes.append(nb)
 
-            dev_node = next((n for n in touched if n.startswith("dev:")), None)
+            dev_node = next((n for n in touched if n.startswith("device:")), None)
             vpa_node = next((n for n in touched if n.startswith("vpa:")), None)
-            card_node = next((n for n in touched if n.startswith("fp:")), None)
+            card_node = next((n for n in touched if n.startswith("card:")), None)
             ip_node = next((n for n in touched if n.startswith("ip:")), None)
             stats = {
                 "device_fan_out": self._fan_out(dev_node or primary),
@@ -203,12 +211,35 @@ class MuleDetector:
         except Exception:
             pass                               # Neo4j down must never break the SLA
 
+    def _resolve_center(self, center: str) -> str | None:
+        """Forgiving center resolution: exact id, known prefix aliases
+        (dev:/device:, fp:/card:, cust:/customer:, em:/email:), or a bare
+        identifier matched against any node's value part."""
+        if not center:
+            return None
+        if self.g.has_node(center):
+            return center
+        aliases = {"dev": "device", "fp": "card", "cust": "customer", "em": "email"}
+        head, sep, tail = center.partition(":")
+        if sep:
+            kind = aliases.get(head.lower(), head.lower())
+            nid = f"{kind}:{tail}"
+            if self.g.has_node(nid):
+                return nid
+            for node in self.g.nodes:
+                kind_n, _, value = node.partition(":")
+                if kind_n == kind and value == tail:
+                    return node
+            return None
+        for node in self.g.nodes:              # bare identifier
+            if node.partition(":")[2] == center:
+                return node
+        return None
+
     # ------------------------------------------------------------- UI canvas
     def topology(self, center: str | None = None) -> dict[str, Any]:
         with self._lock:
-            src = center
-            if src and not self.g.has_node(src):
-                src = None
+            src = self._resolve_center(center) if center else None
             if src is None:
                 candidates = self._last_entities or list(self.g.nodes)
                 src = next((n for n in candidates

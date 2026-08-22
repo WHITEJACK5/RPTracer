@@ -78,18 +78,22 @@ export default function GraphCanvas({
   refreshToken: number;
 }) {
   const [data, setData] = useState<TopoData | null>(null);
+  const [error, setError] = useState<string | null>(null);
   const [hover, setHover] = useState<string | null>(null);
+  const [retryTick, setRetryTick] = useState(0);
 
   useEffect(() => {
     let alive = true;
-    const cid = center && !center.includes(":") ? `dev:${center}` : center ?? undefined;
+    setError(null);
+    // backend node ids are "device:X" / "vpa:Y" / ...; bare ids resolve server-side
+    const cid = center && !center.includes(":") ? `device:${center}` : center ?? undefined;
     fetchTopology(cid)
       .then((d) => alive && setData(d))
-      .catch(() => alive && setData({ nodes: [], edges: [] }));
+      .catch((e) => alive && setError(String(e)));
     return () => {
       alive = false;
     };
-  }, [center, refreshToken]);
+  }, [center, refreshToken, retryTick]);
 
   const layout = useMemo(
     () => (data && data.nodes.length > 0 ? computeLayout(data.nodes, data.edges) : null),
@@ -130,9 +134,23 @@ export default function GraphCanvas({
       </div>
 
       <div className="relative overflow-hidden rounded-xl border border-line bg-black/40">
-        {!layout ? (
+        {error ? (
+          <div className="flex h-[420px] flex-col items-center justify-center gap-3">
+            <p className="font-mono text-xs text-danger">graph engine unreachable — {error}</p>
+            <button
+              onClick={() => setRetryTick((t) => t + 1)}
+              className="chip font-mono !text-[10px] hover:bg-white/10"
+            >
+              RETRY
+            </button>
+          </div>
+        ) : !data ? (
           <div className="flex h-[420px] items-center justify-center font-mono text-xs text-white/30">
             loading topology…
+          </div>
+        ) : !layout ? (
+          <div className="flex h-[420px] items-center justify-center font-mono text-xs text-white/30">
+            no linkable entities yet — run an event to populate the graph
           </div>
         ) : (
           <svg viewBox={`0 0 ${W} ${H}`} className="h-[420px] w-full">
