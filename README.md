@@ -193,10 +193,3 @@ backend/
 data/           preset payloads, append-only ledger
 ```
 
-## Judge checklist
-
-- ✅ Defense-only: detector / verifier / bounded responder — no outbound fund movement
-- ✅ Real-time: p95 pipeline <20ms locally against the 50ms SLA (live badge in UI)
-- ✅ Razorpay-aligned: captured/paid/dispute webhooks, paise handling, signature verify
-- ✅ Explainable: SHAP attribution aligned to final score + reason codes + audit refs
-- ✅ Tamper-evident: SHA-256 chained double-entry ledger, verified at `/healthz`
