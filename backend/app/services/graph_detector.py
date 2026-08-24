@@ -39,9 +39,8 @@ class MuleDetector:
         self._last_entities: list[str] = []
         self._cached_score = 0
         self._access: OrderedDict[str, float] = OrderedDict()   # LRU order
-        self._seed_history()
 
-    # ------------------------------------------------------------------ seed
+    # ------------------------------------------------------------------ partitioning
     def _partition_for(self, node: str | None) -> str:
         if not node:
             return "__root__"
@@ -74,51 +73,13 @@ class MuleDetector:
         self._touch(a)
         self._touch(b)
 
-    def _seed_history(self) -> None:
-        """Deterministic historical graph so demos show rich topology."""
-        dev = self._add("device", "DEV-MULE-RING-01")
-        ip = self._add("ip", "203.0.113.7")
-        self._link(dev, ip)
-        cards = [self._add("card", f"FP-MULE-{i}") for i in (1, 2, 3)]
-        for c in cards:
-            self._link(dev, c)
-        for i in range(1, 15):
-            vpa = self._add("vpa", f"fraudvpa{i:02d}@ybl")
-            cust = self._add("customer", f"CUST-MULE-{i:02d}")
-            email = self._add("email", f"burner{i:02d}@mailinator.com")
-            self._link(dev, vpa)
-            self._link(vpa, cust)
-            self._link(vpa, email)
-            self._link(cards[i % 3], vpa)
-
-        for name, vpa, email in (("alice", "alice@oksbi", "alice@gmail.com"),
-                                 ("bob", "bob@ybl", "bob@yahoo.com")):
-            d = self._add("device", f"DEV-OK-{name.upper()}")
-            v = self._add("vpa", vpa)
-            e = self._add("email", email)
-            c = self._add("customer", f"CUST-OK-{name.upper()}")
-            cd = self._add("card", f"FP-OK-{name.upper()}")
-            i = self._add("ip", f"49.36.{hash(name) % 250}.{(hash(name) * 7) % 250}")
-            for pair in ((d, v), (d, cd), (d, i), (v, e), (v, c)):
-                self._link(*pair)
-
-        d = self._add("device", "DEV-FAM-01")
-        i = self._add("ip", "106.51.77.12")
-        self._link(d, i)
-        for k in (1, 2, 3):
-            v = self._add("vpa", f"fam.member{k}@paytm")
-            self._link(d, v)
-            self._link(v, self._add("customer", f"CUST-FAM-{k}"))
-
-        graph_nodes.set(self.g.number_of_nodes())
-
     def reseed(self) -> None:
-        """Rebuild the deterministic demo history (sandbox reset endpoint)."""
+        """Reset entity graph to empty state (zero entity state)."""
         self.g = nx.Graph()
         self._last_entities = []
         self._cached_score = 0
         self._access.clear()
-        self._seed_history()
+        graph_nodes.set(0)
 
     # ------------------------------------------------------------- ingestion
     def observe(self, ev: TransactionEvent) -> tuple[GraphEvidence, dict[str, Any]]:
@@ -135,11 +96,16 @@ class MuleDetector:
         fan_vpas = self._fan_out(primary)
         identity_mass = sum(
             1 for n in comp if self.g.nodes[n].get("type") in ("vpa", "card"))
-        ring = fan_vpas >= 4 or (fan_vpas >= 3 and identity_mass >= 8)
-        conf = min(0.98, 1.0 - math.exp(-max(fan_vpas - 1, 0) / 6.0))
-        if ring:
-            conf = max(conf, 0.72)
-        score = int(round(conf * 100)) if ring else min(25, len(comp) * 2)
+
+        # Device rotation correlation signal: cluster different devices sharing cards/IPs
+        devices_in_comp = [n for n in comp if self.g.nodes[n].get("type") == "device"]
+        cards_in_comp = [n for n in comp if self.g.nodes[n].get("type") == "card"]
+        device_rotation_detected = len(devices_in_comp) >= 2 and len(cards_in_comp) >= 1 and identity_mass >= 4
+
+        ring = fan_vpas >= 4 or (fan_vpas >= 3 and identity_mass >= 8) or device_rotation_detected
+        # Structural risk score derived from entity graph topology (no uncalibrated "confidence" claim)
+        ring_ratio = min(1.0, fan_vpas / 4.0) if fan_vpas > 0 else 0.0
+        score = min(100, max(40, fan_vpas * 18 + identity_mass * 4)) if ring else min(25, len(comp) * 2)
 
         mule_nodes: list[str] = []
         if ring:
@@ -166,16 +132,16 @@ class MuleDetector:
         }
         summary = (
             f"Mule ring detected — device fans out to {fan_vpas} payment identities "
-            f"(component of {len(comp)} entities, confidence {conf:.0%})"
+            f"(component of {len(comp)} entities, structural ratio {ring_ratio:.2f})"
             if ring else
-            f"No ring — {len(comp)} linked entities, fan-out {fan_vpas}, confidence {conf:.0%}"
+            f"No ring — {len(comp)} linked entities, fan-out {fan_vpas}, structural ratio {ring_ratio:.2f}"
         )
         evidence = GraphEvidence(
             component_size=len(comp),
             mule_nodes=mule_nodes[:20],
             shared_device_vpas=fan_vpas,
             ring_detected=ring,
-            ring_confidence=round(conf, 2),
+            ring_confidence=round(ring_ratio, 2),
             summary=summary,
         )
         self._last_entities = touched
@@ -232,6 +198,8 @@ class MuleDetector:
             self._link(dev, card)
         if dev and ip:
             self._link(dev, ip)
+        if card and vpa:
+            self._link(card, vpa)
         if vpa and email:
             self._link(vpa, email)
         if vpa and cust:

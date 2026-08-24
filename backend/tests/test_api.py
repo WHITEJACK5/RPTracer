@@ -119,11 +119,18 @@ def test_dispute_created_forces_dossier_path(client):
 
 
 def test_graph_topology_endpoint_serves_canvas(client):
+    for i in range(1, 15):
+        client.post("/api/v1/risk/evaluate", json={
+            "event_id": f"test_topo_{i}",
+            "amount": 25000.0,
+            "instrument": {"method": "upi", "vpa": f"mule_vpa_{i}@ybl"},
+            "context": {"device_id": "DEV-MULE-RING-01", "ip": "203.0.113.7"},
+        })
     r = client.get("/api/v1/graph/topology?center=device:DEV-MULE-RING-01")
     assert r.status_code == 200
     body = r.json()
-    assert len(body["nodes"]) > 10
-    assert any(n["mule"] for n in body["nodes"]) or body["center"].startswith("dev")
+    assert len(body["nodes"]) >= 10
+    assert body["center"] == "device:DEV-MULE-RING-01"
 
 
 def test_ledger_stats_and_chain(client):

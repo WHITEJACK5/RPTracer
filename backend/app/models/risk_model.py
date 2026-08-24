@@ -9,8 +9,11 @@ Pipeline contract:
 from __future__ import annotations
 
 import hashlib
+import logging
 import math
 from typing import Any
+
+logger = logging.getLogger("tracer.model")
 
 from data.schema import FEATURE_NAMES
 
@@ -54,9 +57,18 @@ def _clip01(x: float) -> float:
     return max(0.0, min(1.0, float(x)))
 
 
-def featurize(ev: TransactionEvent, gs: dict[str, Any]) -> dict[str, float]:
+def featurize(ev: TransactionEvent, gs: dict[str, Any], server_velocity: dict[str, Any] | None = None) -> dict[str, float]:
     c, i = ev.customer, ev.instrument
-    prev_avg = (ev.context.amount_sum_24h / max(ev.context.txn_count_24h, 1)) or ev.amount
+    v_1h = server_velocity.get("txn_count_1h", ev.context.txn_count_1h) if server_velocity else ev.context.txn_count_1h
+    v_24h = server_velocity.get("txn_count_24h", ev.context.txn_count_24h) if server_velocity else ev.context.txn_count_24h
+    v_sum24h = server_velocity.get("amount_sum_24h", ev.context.amount_sum_24h) if server_velocity else ev.context.amount_sum_24h
+
+    # Use server-observed velocity metrics if available
+    v_1h = max(v_1h, ev.context.txn_count_1h)
+    v_24h = max(v_24h, ev.context.txn_count_24h)
+    v_sum24h = max(v_sum24h, ev.context.amount_sum_24h)
+
+    prev_avg = (v_sum24h / max(v_24h, 1)) or ev.amount
     email_domain = (ev.context.email or "").split("@")[-1].lower()
     return {
         "amount_log": _clip01(math.log10(max(ev.amount, 10.0)) / 6.0),
@@ -65,9 +77,9 @@ def featurize(ev: TransactionEvent, gs: dict[str, Any]) -> dict[str, float]:
         "address_mismatch": 1.0 if ev.context.billing_shipping_mismatch else 0.0,
         "account_newness": _clip01(30.0 / max(c.account_age_days, 1)),
         "new_customer": 1.0 if c.new_customer else 0.0,
-        "txn_rate_1h": _clip01(ev.context.txn_count_1h / 10),
-        "txn_rate_24h": _clip01(ev.context.txn_count_24h / 25),
-        "amount_velocity": _clip01(ev.context.amount_sum_24h / 150_000),
+        "txn_rate_1h": _clip01(v_1h / 10),
+        "txn_rate_24h": _clip01(v_24h / 25),
+        "amount_velocity": _clip01(v_sum24h / 150_000),
         "avg_ticket_ratio": _clip01((ev.amount / max(prev_avg, 1.0)) / 8),
         "device_spread": _clip01(ev.context.distinct_devices_24h / 10),
         "device_fan_out": _clip01(gs.get("device_fan_out", 1) / 15),
@@ -114,24 +126,27 @@ class RiskModel:
         try:
             import xgboost as xgb
         except ImportError:
+            logger.warning("DEGRADED_MODE: xgboost not installed. Using calibrated-linear fallback (capped score <= 70).")
             return
         try:
             if MODEL_PATH.exists():
                 booster = xgb.Booster()
                 booster.load_model(str(MODEL_PATH))
                 if booster.num_features() == len(FEATURES):
-                    # Single-threaded inference: rows are tiny (19 features);
-                    # all-core predict causes thread oversubscription that
-                    # collapses p99 under concurrent load.
                     booster.set_param({"nthread": 1})
                     self._booster = booster
                     self.kind = "xgboost"
                     return
             self._booster = self._train(xgb)
             self.kind = "xgboost"
-        except Exception:      # corrupted artifact / runtime issue -> fallback
+        except Exception as exc:      # corrupted artifact / runtime issue -> fallback
+            logger.warning("DEGRADED_MODE: Failed to load/train XGBoost (%s). Using calibrated-linear fallback.", exc)
             self._booster = None
             self.kind = "calibrated-linear"
+
+    @property
+    def is_degraded(self) -> bool:
+        return self._booster is None
 
     @staticmethod
     def _train(xgb) -> Any:

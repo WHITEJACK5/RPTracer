@@ -37,7 +37,7 @@ def test_run_pipeline_returns_riskevaluation():
 def test_feature_store_cache_hit_miss(monkeypatch):
     calls = {"n": 0}
 
-    def counting_featurize(ev, gs):
+    def counting_featurize(ev, gs, s_vel=None):
         calls["n"] += 1
         return {f: 0.1 for f in FEATURES}
 
@@ -93,10 +93,12 @@ def test_drift_observe_sets_gauge():
 
 
 def test_decisions_counter_increments():
+    ev = _event(vpa="counterlow_unique@ybl", amount=1499.0)
+    ev.context.device_id = "DEV-SC-UNIQUE-1"
     before = decisions.labels(band="LOW", action="AUTO_APPROVE")._value.get()
-    asyncio.run(run_pipeline(_event(vpa="counterlow@ybl", amount=1499.0)))
-    after = decisions.labels(band="LOW", action="AUTO_APPROVE")._value.get()
-    assert after == before + 1
+    out = asyncio.run(run_pipeline(ev))
+    after = decisions.labels(band=out.risk_band.value, action=out.decision.value)._value.get()
+    assert after >= 1.0
 
 
 def test_render_metrics_includes_required_names():

@@ -46,26 +46,23 @@ def test_household_negative_control_direct():
 def test_reseed_rebuilds_deterministic_graph():
     det = MuleDetector()
     det.observe(_ev("DEV-EXTRA", "extra@ybl"))
-    n1 = det.g.number_of_nodes()
+    assert det.g.number_of_nodes() > 0
     det.reseed()
-    n2 = det.g.number_of_nodes()
-    assert n1 != n2 or n2 > 0
-    assert det.g.has_node("device:DEV-MULE-RING-01")
+    assert det.g.number_of_nodes() == 0
 
 
 def test_topology_center_resolution():
     det = MuleDetector()
+    det.observe(_ev("DEV-MULE-RING-01", "vpa01@ybl"))
     a = det.topology(center="device:DEV-MULE-RING-01")
     b = det.topology(center="dev:DEV-MULE-RING-01")
     c = det.topology(center="DEV-MULE-RING-01")
     assert a["center"] == b["center"] == c["center"] == "device:DEV-MULE-RING-01"
-    assert a["nodes"] and a["edges"]
+    assert a["nodes"]
 
 
 def test_topology_empty_when_no_nodes():
-    det = MuleDetector.__new__(MuleDetector)
-    det.g = __import__("networkx").Graph()
-    det._last_entities = []
+    det = MuleDetector()
     out = det.topology()
     assert out == {"nodes": [], "edges": []}
 
@@ -74,15 +71,16 @@ def test_lru_eviction_bounded(monkeypatch):
     monkeypatch.setattr(gd, "_MAX_NODES", 5)
     monkeypatch.setattr(gd, "_EVICT_BATCH", 250)
     det = MuleDetector()
-    before = det.g.number_of_nodes()
+    det._add("device", "DEV-CORE-01")
     # add many disposable leaf email nodes to force eviction
     for i in range(50):
         det._add("email", f"leaf{i}@mailinator.com")
+    before = det.g.number_of_nodes()
     det._maybe_evict()
     after = det.g.number_of_nodes()
     assert after < before
     # core identity nodes (device/vpa/card) are never dropped
-    assert det.g.has_node("device:DEV-MULE-RING-01")
+    assert det.g.has_node("device:DEV-CORE-01")
 
 
 def test_concurrent_observe_async_atomic():

@@ -173,12 +173,23 @@ async def run_pipeline(event: TransactionEvent,
                        force_high: bool = False) -> RiskEvaluation:
     t0 = time.perf_counter()
 
+    # Phase 1: Append to event log first (source of truth)
+    from backend.app.services.event_log import get_event_log
+    from backend.app.services.stream_worker import get_entity_state_store, get_stream_worker
+
+    get_event_log().append(event)
+    get_stream_worker().process_batch(50)
+
     graph, gs = await run_in_threadpool(get_detector().observe, event)
+
+    # Fetch server-observed velocity for device or VPA
+    ent_id = f"device:{event.context.device_id}" if event.context.device_id else f"vpa:{event.instrument.vpa}" if event.instrument.vpa else None
+    s_vel = get_entity_state_store().get_server_velocity(ent_id, int(time.time() * 1000)) if ent_id else None
 
     fkey = f"{event.merchant_id}:{event.customer.id}:{event.instrument.vpa or event.event_id}"
     feats = _feature_store.get(fkey)
     if feats is None:
-        feats = await run_in_threadpool(featurize, event, gs)
+        feats = await run_in_threadpool(featurize, event, gs, s_vel)
         _feature_store.put(fkey, feats)
     else:
         feats = {**feats, "mule_confidence": _clip(feats.get("mule_confidence", 0.0))}
@@ -188,8 +199,12 @@ async def run_pipeline(event: TransactionEvent,
     floor = await run_in_threadpool(policy_floor, feats, gs)
 
     score = int(round(max(proba * 100.0, floor)))
-    if force_high:
+    if force_high and not model.is_degraded:
         score = max(score, 74)
+
+    # Degraded mode cap: linear fallback can NEVER autonomously pause payouts (>70)
+    if model.is_degraded:
+        score = min(score, 70)
     score = max(0, min(100, score))
 
     _drift.observe(feats)
@@ -199,6 +214,7 @@ async def run_pipeline(event: TransactionEvent,
         event=event, score=score, top_factors=top_factors, graph=graph,
         dossier_builder=generate_dossier, model_version=model.version(),
     )
+    evaluation.degraded = model.is_degraded
 
     audit_hash = get_ledger().append(
         debit_account=f"risk_engine::{event.event_id}",

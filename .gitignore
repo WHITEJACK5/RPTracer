@@ -20,3 +20,7 @@ coverage/
 test-results/
 *.tsbuildinfo
 .vercel/
+*.db
+*.db-wal
+*.db-shm
+data/feature_baseline.npz

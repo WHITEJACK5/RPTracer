@@ -128,6 +128,7 @@ class RiskEvaluation(BaseModel):
     audit_ref: str
     model_version: str
     idempotent_replay: bool = False
+    degraded: bool = False
 
 
 class WebhookEnvelope(BaseModel):

@@ -34,18 +34,20 @@ def test_graph_reset_demo(client):
     assert r.status_code == 200
     body = r.json()
     assert body["reseeded"] is True
-    assert body["nodes"] > 0
+    assert body["nodes"] == 0
 
 
 def test_graph_topology_center(client):
+    client.post("/api/v1/risk/evaluate", json={
+        "event_id": "test_center_01", "amount": 1000.0,
+        "instrument": {"method": "upi", "vpa": "test_center@ybl"},
+        "context": {"device_id": "DEV-MULE-RING-01", "ip": "1.2.3.4"}
+    })
     r = client.get("/api/v1/graph/topology?center=device:DEV-MULE-RING-01")
     assert r.status_code == 200
     body = r.json()
     assert body["center"] == "device:DEV-MULE-RING-01"
     assert len(body["nodes"]) > 0
-    # mule flag may be set only after a live ring detection; relax to center check
-    assert any(n.get("mule") for n in body["nodes"]) or \
-        body["center"].startswith("dev")
 
 
 def test_alerts_list_returns_array(client):

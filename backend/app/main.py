@@ -7,6 +7,7 @@ security headers, RFC 7807 error envelope, CORS allow-list, optional docs).
 """
 from __future__ import annotations
 
+import asyncio
 import time
 import traceback
 from contextlib import asynccontextmanager
@@ -74,14 +75,16 @@ def _problem(status: int, title: str, detail: str, instance: str = "/healthz",
 async def lifespan(_: FastAPI):
     DATA_DIR.mkdir(parents=True, exist_ok=True)
     get_ledger()                       # opens/creates append-only ledger
-    get_detector()                     # seeds historical mule graph
+    get_detector()                     # initializes mule graph detector
     from backend.app.models.risk_model import get_risk_model
+    from backend.app.services.stream_worker import get_stream_worker
 
     get_risk_model()                   # loads cached GBDT or trains once (~2s)
+    worker = get_stream_worker()
+    worker_task = asyncio.create_task(worker.run_loop())
+
     await run_pipeline(                # warm threadpools / caches before traffic
         TransactionEvent(event_id="warmup", amount=1499))
-    # precompute the honest-metrics card off-thread so the first
-    # /api/v1/model/report request never stalls (~4k predictions otherwise)
     import threading
 
     def _report() -> None:
@@ -93,7 +96,11 @@ async def lifespan(_: FastAPI):
             pass                       # report is best-effort, never boot-critical
 
     threading.Thread(target=_report, daemon=True).start()
-    yield
+    try:
+        yield
+    finally:
+        worker._running = False
+        worker_task.cancel()
 
 
 def create_app() -> FastAPI:
