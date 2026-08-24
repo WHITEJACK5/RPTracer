@@ -23,3 +23,9 @@ def ledger_stats(deep: bool = False) -> dict:
         out["chain_verified"] = ledger.verify_chain()
         out["deep_scan"] = True
     return out
+
+
+@router.get("/api/v1/ledger")
+def list_ledger_entries(limit: int = 100) -> list[dict]:
+    """Return recent immutable audit ledger entries."""
+    return get_ledger().read_recent(limit)

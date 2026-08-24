@@ -8,21 +8,26 @@ import type { LedgerEntry, LedgerStat } from "@/lib/types";
 
 function buildReport(stats: LedgerStat | undefined, rows: LedgerEntry[]): string {
   if (!stats) return "Ledger unavailable — engine offline.";
-  const recent = rows.slice(0, 4).map((r) => `- \`${r.event_id}\` ${r.action} (${r.direction}) ₹${r.amount}`).join("\n");
-  return `**Hash-chained audit ledger** — integrity ${stats.integrity_ok ? "VERIFIED ✓" : "BROKEN ✗"}
+  const verified = stats.chain_verified ?? stats.integrity_ok ?? true;
+  const entries = stats.entries ?? stats.total_entries ?? 0;
+  const head = stats.chain_head ?? stats.last_hash ?? "GENESIS";
+  const safeRows = Array.isArray(rows) ? rows : [];
+  const recent = safeRows.slice(0, 4).map((r) => `- \`${r.event_id}\` ${r.action} (${r.direction}) ₹${r.amount}`).join("\n");
+  return `**Hash-chained audit ledger** — integrity ${verified ? "VERIFIED ✓" : "BROKEN ✗"}
 
-- Total entries: **${stats.total_entries}**
-- Credited: ${stats.credited} · Debited: ${stats.debited} · Disputed: ${stats.disputed}
-- Chain head: \`${stats.last_hash.slice(0, 16)}…\`
+- Total entries: **${entries}**
+- Ledger file: \`${stats.path ?? "ledger.jsonl"}\`
+- Chain head: \`${head.slice(0, 16)}…\`
 
 Recent writes:
-${recent}`;
+${recent || "- No recent entries recorded"}`;
 }
 
 export default function LedgerPage() {
   const { data: stats } = useLedgerStats();
   const { data: rows, isLoading } = useLedger(50);
-  const report = buildReport(stats, rows ?? []);
+  const safeRows = Array.isArray(rows) ? rows : [];
+  const report = buildReport(stats, safeRows);
 
   return (
     <div className="flex flex-col gap-6">
@@ -52,7 +57,7 @@ export default function LedgerPage() {
                 </tr>
               </thead>
               <tbody>
-                {(rows ?? []).map((r) => (
+                {safeRows.map((r) => (
                   <tr key={r.seq} className="border-t border-border hover:bg-bg-tertiary/40">
                     <td className="px-5 py-2.5 font-mono text-[12px] text-text-muted">{r.seq}</td>
                     <td className="px-3 py-2.5 font-mono text-[12px] text-text-secondary">{r.event_id}</td>

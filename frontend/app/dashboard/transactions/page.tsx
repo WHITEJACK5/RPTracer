@@ -15,7 +15,7 @@ export default function TransactionsPage() {
   const [filters, setFilters] = useState<Filters>({ q: "", minAmount: "", direction: "ALL" });
 
   const rows: LedgerEntry[] = useMemo(() => {
-    if (!data) return [];
+    if (!Array.isArray(data)) return [];
     const min = filters.minAmount ? Number(filters.minAmount) : 0;
     return data.filter((r) => {
       if (filters.q && !(`${r.event_id} ${r.action} ${r.actor}`.toLowerCase().includes(filters.q.toLowerCase()))) return false;

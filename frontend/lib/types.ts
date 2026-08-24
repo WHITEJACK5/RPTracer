@@ -86,27 +86,43 @@ export type Topology = {
 /* Model report                                                       */
 /* ------------------------------------------------------------------ */
 export type ModelReport = {
+  label?: string;
   model_version: string;
-  trained_at: string;
-  auc_roc: number;
-  precision: number;
-  recall: number;
-  f1: number;
-  feature_stability: Record<string, number>;
-  drift_ppm: number;
-  notes: string[];
+  model_kind?: string;
+  holdout?: string;
+  prevalence?: number;
+  auprc?: number;
+  bayes_ceiling_auprc?: number;
+  efficiency_vs_ceiling?: number;
+  fixed_threshold_operating_points?: Record<string, {
+    precision: number;
+    recall: number;
+    flagged: number;
+    fp_per_1000_legit: number;
+    est_review_friction_inr_per_1k_txns: number;
+  }>;
+  flag_rate_operating_points?: Record<string, any>;
+  auc_roc?: number;
+  precision?: number;
+  recall?: number;
+  f1?: number;
 };
 
 /* ------------------------------------------------------------------ */
 /* Ledger                                                             */
 /* ------------------------------------------------------------------ */
 export type LedgerStat = {
-  total_entries: number;
-  credited: number;
-  debited: number;
-  disputed: number;
-  last_hash: string;
-  integrity_ok: boolean;
+  entries: number;
+  chain_verified: boolean;
+  chain_head: string;
+  path: string;
+  deep_scan?: boolean;
+  total_entries?: number;
+  integrity_ok?: boolean;
+  credited?: number;
+  debited?: number;
+  disputed?: number;
+  last_hash?: string;
 };
 
 export type LedgerEntry = {

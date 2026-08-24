@@ -103,6 +103,32 @@ class AuditLedger:
         self._boot_intact = self._load_and_verify()
         return self._boot_intact
 
+    def read_recent(self, limit: int = 100) -> list[dict[str, Any]]:
+        """Return the most recent ``limit`` ledger entries for UI inspection."""
+        if not self.path.exists():
+            return []
+        lines: list[str] = []
+        with _LOCK:
+            with self.path.open("r", encoding="utf-8") as fh:
+                for line in fh:
+                    line = line.strip()
+                    if line:
+                        lines.append(line)
+        recent_lines = lines[-limit:]
+        out = []
+        total = self._entries
+        for idx, line in enumerate(reversed(recent_lines)):
+            try:
+                rec = json.loads(line)
+                rec["seq"] = total - idx
+                rec["action"] = rec.get("decision", rec.get("side", "LOG"))
+                rec["actor"] = rec.get("account", "system")
+                rec["direction"] = rec.get("side", "CREDIT")
+                out.append(rec)
+            except Exception:
+                pass
+        return out
+
 
 _ledger: AuditLedger | None = None
 
