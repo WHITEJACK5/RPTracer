@@ -1,0 +1,169 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ============================================================================
+   TRACER design tokens — light + .dark
+   Every visual primitive is a CSS variable. Components MUST NOT hardcode hex.
+   ========================================================================== */
+:root {
+  --color-bg-primary: #f5f6fb;
+  --color-bg-secondary: #ffffff;
+  --color-bg-tertiary: #eceff6;
+  --color-surface: rgba(255, 255, 255, 0.72);
+  --color-surface-strong: #ffffff;
+  --color-border: rgba(11, 13, 22, 0.1);
+  --color-border-strong: rgba(11, 13, 22, 0.16);
+  --color-text-primary: #0c0e16;
+  --color-text-secondary: #3a3f4d;
+  --color-text-muted: #6b7280;
+  --color-gold-400: #f5c451;
+  --color-gold-500: #e0a83a;
+  --color-gold-600: #c98f24;
+  --color-neon-green: #1faa5b;
+  --color-neon-green-soft: #4fd690;
+  --color-danger: #e23b3b;
+  --color-warn: #d98813;
+  --color-ok: #15924a;
+  --shadow-gold: 0 0 22px -6px rgba(224, 168, 58, 0.5);
+  --shadow-neon: 0 0 22px -6px rgba(31, 170, 91, 0.45);
+  --radius-sm: 8px;
+  --radius-md: 14px;
+  --radius-lg: 22px;
+  --font-inter: "Inter", system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, monospace;
+  color-scheme: light;
+}
+
+.dark {
+  --color-bg-primary: #07070b;
+  --color-bg-secondary: #0c0d14;
+  --color-bg-tertiary: #121320;
+  --color-surface: rgba(18, 18, 26, 0.7);
+  --color-surface-strong: rgba(20, 20, 30, 0.92);
+  --color-border: rgba(255, 255, 255, 0.08);
+  --color-border-strong: rgba(255, 255, 255, 0.14);
+  --color-text-primary: #e7e9f2;
+  --color-text-secondary: #aab1c5;
+  --color-text-muted: #6b7280;
+  --color-gold-400: #f7cf63;
+  --color-gold-500: #e0a83a;
+  --color-gold-600: #c98f24;
+  --color-neon-green: #36f08a;
+  --color-neon-green-soft: #6cf0ab;
+  --color-danger: #ef4444;
+  --color-warn: #f59e0b;
+  --color-ok: #36f08a;
+  --shadow-gold: 0 0 26px -4px rgba(224, 168, 58, 0.55);
+  --shadow-neon: 0 0 26px -4px rgba(54, 240, 138, 0.55);
+  --radius-sm: 8px;
+  --radius-md: 14px;
+  --radius-lg: 22px;
+  --font-inter: "Inter", system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, monospace;
+  color-scheme: dark;
+}
+
+/* Data-visualization palette (entity types, chart series). Declared here so
+   components reference them via var() and stay free of hardcoded hex. */
+:root,
+.dark {
+  --data-device: #a855f7;
+  --data-vpa: #00d4aa;
+  --data-card: #60a5fa;
+  --data-ip: #94a3b8;
+  --data-email: #f59e0b;
+  --data-customer: #64748b;
+  --data-mule: #ef4444;
+  --chart-low: var(--color-neon-green);
+  --chart-med: var(--color-gold-500);
+  --chart-high: var(--color-danger);
+  --chart-grid: rgba(255, 255, 255, 0.06);
+}
+
+@layer base {
+  * {
+    border-color: var(--color-border);
+  }
+
+  html,
+  body {
+    background: var(--color-bg-primary);
+    color: var(--color-text-primary);
+    font-family: var(--font-inter);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    transition: background-color 0.3s ease, color 0.3s ease;
+  }
+
+  body {
+    min-height: 100vh;
+  }
+
+  /* Grainy-black noise overlay — only in dark mode */
+  .dark::before {
+    content: "";
+    position: fixed;
+    inset: 0;
+    z-index: 0;
+    pointer-events: none;
+    opacity: 0.03;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  }
+
+  ::selection {
+    background: var(--color-gold-500);
+    color: #07070b;
+  }
+}
+
+@layer components {
+  .glass {
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-lg);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    box-shadow:
+      0 1px 0 0 rgba(255, 255, 255, 0.05) inset,
+      0 22px 60px -28px rgba(0, 0, 0, 0.55);
+  }
+
+  .text-gradient {
+    background-image: linear-gradient(
+      92deg,
+      var(--color-gold-400) 0%,
+      var(--color-gold-500) 35%,
+      var(--color-neon-green) 100%
+    );
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+
+  .chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.375rem;
+    border-radius: 9999px;
+    border: 1px solid var(--color-border);
+    background: rgba(255, 255, 255, 0.04);
+    padding: 0.25rem 0.75rem;
+    font-size: 11px;
+    font-weight: 500;
+    letter-spacing: 0.02em;
+  }
+
+  .terminal-scroll::-webkit-scrollbar,
+  body::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+  .terminal-scroll::-webkit-scrollbar-thumb {
+    background: color-mix(in srgb, var(--color-neon-green) 35%, transparent);
+    border-radius: 8px;
+  }
+  .terminal-scroll::-webkit-scrollbar-track {
+    background: transparent;
+  }
+}

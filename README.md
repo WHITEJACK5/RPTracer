@@ -137,15 +137,24 @@ customers into verified sales. Humans adjudicate anything irreversible.
 ## Quickstart
 
 ```bash
+# Backend (canonical app factory lives in backend/app)
 pip install -r backend/requirements.txt
-uvicorn backend.main:app --port 8000        # docs: /docs · health: /healthz
+uvicorn backend.app.main:app --port 8000    # entrypoint; /healthz · /metrics · /docs (if DOCS_ENABLED=1)
 
-npm install && npm run dev                  # dashboard on http://localhost:3000
+# Frontend (now lives in frontend/)
+cd frontend && npm install && npm run dev   # dashboard on http://localhost:3000
 ```
 
-Optional env: `TRACER_REDIS_URL`, `TRACER_NEO4J_URI`, `OPENAI_API_KEY`,
-`TRACER_LLM_MODEL`, `RAZORPAY_WEBHOOK_SECRET`, `RAZORPAY_REQUIRE_WEBHOOK_SECRET`,
-`NEXT_PUBLIC_API_BASE`. Full stack: `docker compose up --build`.
+Optional env (see `.env.example`): `ENVIRONMENT`, `DOCS_ENABLED`,
+`REDIS_URL`, `NEO4J_URI`, `OPENAI_API_KEY`, `ANTHROPIC_API_KEY`,
+`LLM_MODEL`, `RAZORPAY_WEBHOOK_SECRET`, `REQUIRE_WEBHOOK_SECRET`,
+`IDEMPOTENCY_TTL_SECONDS`, `NEXT_PUBLIC_API_BASE`. Full stack:
+`docker compose up --build`.
+
+> **Restructured (Section 1.1):** backend source now lives under `backend/app/`
+> (api/v1, core, models, services, infrastructure) with backward-compatible shims
+> at the old `backend/` paths. Frontend was moved into `frontend/`. See
+> [ARCHITECTURE.md](ARCHITECTURE.md) and [DECISIONS.md](DECISIONS.md).
 
 See [ARCHITECTURE.md](ARCHITECTURE.md) for the component map and the actual file
 tree of this repo.

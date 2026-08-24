@@ -15,4 +15,8 @@ data/ledger.jsonl
 Thumbs.db
 *.log
 coverage/
+.coverage
+*.coverage
+test-results/
+*.tsbuildinfo
 .vercel/

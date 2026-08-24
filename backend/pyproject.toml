@@ -1,0 +1,60 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "tracer-backend"
+version = "1.0.0"
+description = "TRACER — defense-only AI fraud-risk engine (Razorpay buildathon)"
+requires-python = ">=3.11"
+dependencies = [
+    "fastapi>=0.111,<1.0",
+    "uvicorn[standard]>=0.30",
+    "pydantic>=2.7",
+    "pydantic-settings>=2.2",
+    "httpx>=0.27",
+    "networkx>=3.3",
+    "numpy>=1.26",
+    "xgboost>=2.0.3",
+    "redis>=5.0",
+    "structlog>=24.1",
+    "prometheus-client>=0.19",
+    "pytest>=8.2",
+]
+
+[tool.setuptools]
+packages = ["backend"]
+
+[tool.black]
+line-length = 100
+target-version = ["py311"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+src = ["backend"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP", "SIM", "C4", "W"]
+ignore = ["B008", "C401", "SIM105", "E501", "UP042", "B905"]
+
+[tool.ruff.lint.per-file-ignores]
+"backend/tests/*" = ["B", "F401", "F811"]
+
+[tool.mypy]
+python_version = "3.11"
+warn_unused_ignores = false
+ignore_missing_imports = true
+plugins = []
+
+[[tool.mypy.overrides]]
+module = ["xgboost.*", "neo4j.*", "redis.*", "shap.*", "torch.*"]
+ignore_missing_imports = true
+
+[tool.bandit]
+exclude_dirs = ["backend/tests", "backend/app"]
+skips = ["B101", "B307", "B608"]
+
+[tool.pytest.ini_options]
+testpaths = ["backend/tests"]
+addopts = "-q"

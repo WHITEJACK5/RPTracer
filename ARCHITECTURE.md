@@ -4,46 +4,59 @@ Tree below is generated from the actual repository (`git ls-files`) — not hand
 
 ```text
 .github/workflows/ci.yml        CI: pytest + next build on every push
-app/                            Next.js 14 dashboard (App Router)
-  components/
-    Navbar.tsx                  brand, track badge, SLA + engine-health pills
+frontend/                       Next.js 14 dashboard (App Router) — moved from repo root
+  app/
+    layout.tsx / page.tsx / dashboard/*   pages + ThemeProvider + LightBar
+    globals.css                 design-token system (gold/white/neon-green, grainy black)
+    components/
+      ui/                      9 bespoke components (LightBar, AvatarList, TextReveal,
+                               StreamingText, GoldButton, GoldLoader, GoldInput,
+                               GlassForm, LumaDotBackground)
+  lib/ hooks/                  API client, theme helper, React Query, live feed
+  package.json / next.config.mjs / tailwind.config.ts / tsconfig.json
+
     PayloadSandbox.tsx          4 preset payloads, editable JSON, run button
     RiskGauge.tsx               animated score arc + diverging SHAP bars
     AgentTerminal.tsx           typewriter stream of bounded-agent trace
     GraphCanvas.tsx             force-directed SVG entity graph (mules in red)
     DisputeDossierModal.tsx     evidence pack viewer (LLM/template badge)
   layout.tsx / page.tsx / globals.css
-backend/
-  main.py                       FastAPI app: CORS, middleware, routers,
-                                /healthz, /api/v1/{graph,presets,ledger,model-report}
-  config.py                     env-driven settings; policy band thresholds
-  schemas.py                    Pydantic v2 contracts (event/evaluation/dossier)
-  api/v1/
-    evaluate.py                 POST /api/v1/risk/evaluate
-    webhooks.py                 POST /api/v1/webhooks/razorpay (HMAC verify;
-                                honest skip-reason when secret unset; 403 enforce mode)
-  core/
-    engine.py                   orchestration: graph → featurize → GBDT → floors
-                                → attribution → bounded agent → ledger
-    audit.py                    append-only hash-chained double-entry ledger;
-                                O(1) integrity state + deep rescan
-    idempotency.py              pure-ASGI idempotency middleware (Redis/in-proc)
-  models/
-    risk_model.py               featurize, policy floors, XGBoost wrapper
-                                (monotone constraints; single-thread predict);
-                                calibrated-linear fallback scorer
-    shap_explainer.py           additive attribution aligned to final score;
-                                machine reason codes
-    report.py                   held-out metrics for GET /api/v1/model/report
-  graph/
-    mule_detector.py            NetworkX entity graph; ring = fan-out +
-                                identity-mass heuristics; Neo4j mirror hook
-    embeddings.py               OPTIONAL offline encoder experiment — not in
-                                the live path, no live claim depends on it
-  agents/
-    bounded_responder.py        state machine 0-30/31-70/71-100 → whitelisted actions
-    dispute_generator.py        strict-schema dossier (LLM w/ sanitized inputs
-                                + deterministic template fallback)
+backend/                       (canonical package now lives under backend/app/)
+  app/
+    main.py                     create_app() factory: CORS allow-list, security
+                                 headers, idempotency + rate-limit middleware,
+                                 RFC7807 handler, /healthz, /metrics, routers
+    api/v1/
+      health.py                 GET /healthz (probes model/ledger/redis/neo4j)
+      transactions.py           POST /api/v1/evaluate (+ legacy alias)
+      graph.py                  GET /api/v1/graph/topology, POST reset-demo
+      ledger.py                 GET /api/v1/ledger/stats
+      model.py                  GET /api/v1/model/{report,info}, /api/v1/presets
+      webhooks.py               POST /api/v1/webhooks/razorpay (HMAC verify;
+                                 honest skip-reason when secret unset; 403 enforce)
+    core/
+      config.py                 pydantic-settings; ConfigError on bad prod secrets
+      security.py               constant-time HMAC + prompt-injection sanitizer
+      constants.py              band thresholds, colors, metric names
+      idempotency.py            NX+TTL idempotency (Redis or in-proc emulation)
+      rate_limit.py             sliding-window per IP + merchant
+      metrics.py                Prometheus gauges/histograms/counters
+    models/
+      schemas.py                Pydantic v2 contracts (event/evaluation/dossier)
+      risk_model.py             featurize, policy floors, XGBoost wrapper
+      shap_explainer.py         additive attribution; machine reason codes
+      report.py                 held-out metrics for /api/v1/model/report
+    services/
+      scorer.py                 pipeline orchestration + feature-store cache,
+                                 PSI drift monitor, cached async SHAP
+      graph_detector.py         NetworkX graph; per-partition asyncio.Lock;
+                                 LRU eviction; non-blocking Neo4j mirror
+      ledger_service.py          append-only hash-chained double-entry ledger
+      llm_dossier.py             bounded-agent state machine + dossier generator
+    infrastructure/
+      redis_client.py / neo4j_client.py / razorpay_client.py  lazy, graceful
+  # Deprecated backward-compat shims re-export from backend.app.* (see DECISIONS.md)
+  main.py config.py schemas.py core/ graph/ agents/ models/
   tests/
     conftest.py                 session TestClient + fixtures
     test_api.py                 endpoints, idempotent replay, webhook signature
