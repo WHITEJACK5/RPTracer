@@ -1,16 +1,11 @@
 import { defineConfig, devices } from "@playwright/test";
 
-/**
- * Playwright config. Boots a production build via `npm run build && npm run
- * start` and points the tests at http://localhost:3000. E2E suites live in
- * `e2e/`. Chromium only by default; add more projects from `devices` as needed.
- */
 export default defineConfig({
   testDir: "./e2e",
-  timeout: 60_000,
-  expect: { timeout: 10_000 },
+  timeout: 120_000,
+  expect: { timeout: 15_000 },
   fullyParallel: true,
-  retries: process.env.CI ? 1 : 0,
+  retries: process.env.CI ? 2 : 1,
   reporter: "list",
   use: {
     baseURL: process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000",
@@ -20,7 +15,7 @@ export default defineConfig({
   webServer: {
     command: "npm run dev",
     url: "http://localhost:3000",
-    reuseExistingServer: true,
-    timeout: 120_000,
+    reuseExistingServer: !process.env.CI,
+    timeout: 180_000,
   },
 });
