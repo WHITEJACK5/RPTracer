@@ -10,7 +10,7 @@ import { useReducedMotion } from "framer-motion";
  * throttled requestAnimationFrame loop and pauses entirely under
  * `prefers-reduced-motion` (a single static grid is drawn).
  */
-export default function LumaDotBackground({ className }: { className?: string }) {
+export default function DotBackground({ className }: { className?: string }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const reduced = useReducedMotion();
 

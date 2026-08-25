@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { Activity, FileText, LayoutDashboard, Network, Settings, ShieldAlert } from "lucide-react";
 import Link from "next/link";
@@ -32,11 +32,11 @@ export default function Sidebar() {
               className={cn(
                 "flex items-center gap-3 rounded-md px-3 py-2.5 text-sm transition-colors",
                 active
-                  ? "bg-surface text-text-primary shadow-gold"
+                  ? "bg-surface text-text-primary shadow-accent"
                   : "text-text-secondary hover:bg-bg-tertiary hover:text-text-primary"
               )}
             >
-              <Icon size={17} className={active ? "text-gold-400" : ""} />
+              <Icon size={17} className={active ? "text-accent" : ""} />
               {label}
             </Link>
           );
@@ -45,7 +45,7 @@ export default function Sidebar() {
 
       <div className="mt-auto">
         <div className="mb-3 flex items-center gap-2 font-mono text-[10px] uppercase tracking-wider text-text-muted">
-          <ShieldAlert size={13} className="text-neon-green" /> Active Analysts
+          <ShieldAlert size={13} className="text-risk-low" /> Active Analysts
         </div>
         <AvatarList
           analysts={analysts ?? []}

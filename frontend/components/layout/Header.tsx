@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import Link from "next/link";
 import ThemeToggle from "./ThemeToggle";
@@ -19,7 +19,7 @@ export default function Header({
             <circle cx="20" cy="20" r="3.4" fill="var(--color-gold-400)" />
             <line x1="20" y1="20" x2="33.5" y2="9.5" stroke="var(--color-neon-green)" strokeWidth="1.8" strokeLinecap="round" />
           </svg>
-          <span className="font-grotesk text-xl font-bold tracking-tight text-gradient">TRACER</span>
+          <span className="font-sans text-xl font-bold tracking-tight text-gradient">TRACER</span>
         </Link>
 
         {links && links.length > 0 && (

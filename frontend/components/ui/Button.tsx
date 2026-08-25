@@ -10,14 +10,14 @@ import {
 import { cn } from "@/lib/utils";
 
 const buttonVariants = cva(
-  "relative inline-flex items-center justify-center gap-2 rounded-md font-grotesk text-sm font-bold tracking-wide transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-neon-green focus-visible:ring-offset-2 focus-visible:ring-offset-bg-primary disabled:opacity-60 disabled:pointer-events-none",
+  "relative inline-flex items-center justify-center gap-2 rounded-md font-sans text-sm font-bold tracking-wide transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 focus-visible:ring-offset-bg-primary disabled:opacity-60 disabled:pointer-events-none",
   {
     variants: {
       variant: {
         primary:
-          "text-black bg-gradient-to-r from-gold-400 via-gold-500 to-neon-green shadow-gold hover:shadow-neon",
+          "text-white bg-accent hover:bg-accent-hover shadow-accent",
         secondary:
-          "text-text-primary border border-border-strong bg-surface hover:border-gold-500",
+          "text-text-primary border border-border-strong bg-surface hover:border-accent",
         ghost: "text-text-secondary hover:text-text-primary hover:bg-bg-tertiary",
       },
       size: {
@@ -30,7 +30,6 @@ const buttonVariants = cva(
   }
 );
 
-/** framer-motion redefines these DOM handlers, so omit them from the props. */
 type OmitMotion<T> = Omit<
   T,
   | "onAnimationStart"
@@ -51,13 +50,7 @@ type ButtonProps = OmitMotion<ButtonHTMLAttributes<HTMLButtonElement>> &
 type AnchorProps = OmitMotion<AnchorHTMLAttributes<HTMLAnchorElement>> &
   VariantProps<typeof buttonVariants> & { href: string };
 
-/**
- * Primary action button. 3D-style gradient (gold-400 → gold-500 → neon-green)
- * lifts on hover, depresses to scale-0.95 on press, and shows a neon-green
- * focus ring. `variant`/`size` come from class-variance-authority. When `href`
- * is provided it renders an accessible <a>. Honors `prefers-reduced-motion`.
- */
-const GoldButton = forwardRef<
+const Button = forwardRef<
   HTMLButtonElement | HTMLAnchorElement,
   ButtonProps | AnchorProps
 >((props, ref) => {
@@ -92,7 +85,8 @@ const GoldButton = forwardRef<
     </motion.button>
   );
 });
-GoldButton.displayName = "GoldButton";
+Button.displayName = "Button";
 
-export default GoldButton;
+export default Button;
 export { buttonVariants };
+export type { ButtonProps, AnchorProps };

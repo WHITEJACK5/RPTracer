@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useEffect, useState } from "react";
 import { fetchHealth } from "@/lib/api";
@@ -32,13 +32,13 @@ export default function Navbar() {
             <circle cx="20" cy="20" r="3.4" fill="var(--color-gold-400)" />
             <line x1="20" y1="20" x2="33.5" y2="9.5" stroke="var(--color-neon-green)" strokeWidth="1.8" strokeLinecap="round" />
           </svg>
-          <span className="font-grotesk text-xl font-bold tracking-tight text-gradient">TRACER</span>
+          <span className="font-sans text-xl font-bold tracking-tight text-gradient">TRACER</span>
           <span className="rounded border border-border px-1.5 py-0.5 font-mono text-[10px] text-text-muted">v1.0</span>
         </div>
 
-        <div className="chip ml-3 hidden md:inline-flex !border-neon-green/30 !bg-neon-green/5">
-          <span className="h-1.5 w-1.5 rounded-full bg-neon-green animate-glow-breathe" />
-          <span className="text-neon-green/90">RAZORPAY AI RISK MANAGER · TRACK 2</span>
+        <div className="chip ml-3 hidden md:inline-flex !border-risk-low/30 !bg-risk-low/5">
+          <span className="h-1.5 w-1.5 rounded-full bg-risk-low animate-glow-breathe" />
+          <span className="text-risk-low/90">RAZORPAY AI RISK MANAGER Â· TRACK 2</span>
         </div>
 
         <div className="flex-1" />
@@ -47,7 +47,7 @@ export default function Navbar() {
           <span
             className={`h-1.5 w-1.5 rounded-full ${
               health === "up"
-                ? "bg-ok shadow-neon"
+                ? "bg-ok shadow-accent"
                 : health === "down"
                 ? "bg-danger shadow-[0_0_8px_var(--color-danger)]"
                 : "bg-text-muted animate-glow-breathe"

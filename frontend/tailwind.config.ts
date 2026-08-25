@@ -1,9 +1,5 @@
 import type { Config } from "tailwindcss";
 
-/**
- * TRACER design system — all colors resolve to CSS variables (see styles/globals.css)
- * so that light/dark theming is driven entirely by the .dark class on <html>.
- */
 const config: Config = {
   darkMode: "class",
   content: [
@@ -20,24 +16,26 @@ const config: Config = {
         "bg-secondary": "var(--color-bg-secondary)",
         "bg-tertiary": "var(--color-bg-tertiary)",
         surface: "var(--color-surface)",
-        "surface-strong": "var(--color-surface-strong)",
         border: "var(--color-border)",
         "border-strong": "var(--color-border-strong)",
         "text-primary": "var(--color-text-primary)",
         "text-secondary": "var(--color-text-secondary)",
         "text-muted": "var(--color-text-muted)",
-        "gold-400": "var(--color-gold-400)",
-        "gold-500": "var(--color-gold-500)",
-        "gold-600": "var(--color-gold-600)",
-        "neon-green": "var(--color-neon-green)",
-        "neon-green-soft": "var(--color-neon-green-soft)",
-        danger: "var(--color-danger)",
-        warn: "var(--color-warn)",
-        ok: "var(--color-ok)",
+        accent: "var(--color-accent)",
+        "accent-hover": "var(--color-accent-hover)",
+        "risk-low": "var(--color-risk-low)",
+        "risk-medium": "var(--color-risk-medium)",
+        "risk-high": "var(--color-risk-high)",
+        "entity-device": "var(--color-entity-device)",
+        "entity-vpa": "var(--color-entity-vpa)",
+        "entity-card": "var(--color-entity-card)",
+        "entity-ip": "var(--color-entity-ip)",
+        "entity-email": "var(--color-entity-email)",
+        "entity-customer": "var(--color-entity-customer)",
+        "entity-mule": "var(--color-entity-mule)",
       },
       fontFamily: {
         sans: ["var(--font-inter)", "system-ui", "sans-serif"],
-        grotesk: ["var(--font-inter)", "system-ui", "sans-serif"],
         mono: ["var(--font-mono)", "ui-monospace", "monospace"],
       },
       borderRadius: {
@@ -46,8 +44,7 @@ const config: Config = {
         lg: "var(--radius-lg)",
       },
       boxShadow: {
-        gold: "var(--shadow-gold)",
-        neon: "var(--shadow-neon)",
+        accent: "var(--shadow-accent)",
       },
       animation: {
         "pulse-badge": "pulseBadge 2.2s ease-in-out infinite",
@@ -59,8 +56,8 @@ const config: Config = {
       },
       keyframes: {
         pulseBadge: {
-          "0%, 100%": { boxShadow: "0 0 0 0 var(--shadow-neon)" },
-          "50%": { boxShadow: "0 0 0 8px rgba(54,240,138,0)" },
+          "0%, 100%": { boxShadow: "0 0 0 0 var(--shadow-accent)" },
+          "50%": { boxShadow: "0 0 0 8px rgba(59,130,246,0)" },
         },
         glowBreathe: {
           "0%, 100%": { opacity: "0.5" },

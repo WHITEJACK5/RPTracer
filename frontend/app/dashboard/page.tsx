@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { motion } from "framer-motion";
 import {
@@ -14,7 +14,7 @@ import {
 } from "recharts";
 import { useLedgerStats, useModelReport } from "@/hooks/useApi";
 import { useLiveFeed } from "@/hooks/useLiveFeed";
-import GoldLoader from "@/components/ui/GoldLoader";
+import Loader from "@/components/ui/Loader";
 import StreamingText from "@/components/ui/StreamingText";
 import { cn } from "@/lib/utils";
 
@@ -22,7 +22,7 @@ function Kpi({ label, value, tone }: { label: string; value: string; tone?: stri
   return (
     <div className="glass p-4">
       <p className="font-mono text-[10px] uppercase tracking-wider text-text-muted">{label}</p>
-      <p className={cn("mt-1 font-grotesk text-2xl font-bold", tone ?? "text-text-primary")}>{value}</p>
+      <p className={cn("mt-1 font-sans text-2xl font-bold", tone ?? "text-text-primary")}>{value}</p>
     </div>
   );
 }
@@ -63,29 +63,29 @@ export default function DashboardOverview() {
     <div className="flex flex-col gap-6">
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
-          <h1 className="font-grotesk text-3xl font-bold text-text-primary">Overview</h1>
+          <h1 className="font-sans text-3xl font-bold text-text-primary">Overview</h1>
           <p className="text-sm text-text-secondary">Live risk-engine telemetry & ledger integrity.</p>
         </div>
         <span className="chip">
-          <span className={`h-1.5 w-1.5 rounded-full ${connected ? "bg-neon-green animate-glow-breathe" : "bg-text-muted"}`} />
+          <span className={`h-1.5 w-1.5 rounded-full ${connected ? "bg-risk-low animate-glow-breathe" : "bg-text-muted"}`} />
           <span className="text-text-secondary">LIVE FEED {connected ? "CONNECTED" : "POLLING"}</span>
         </span>
       </div>
 
       {mLoading || lLoading ? (
-        <div className="relative h-64"><GoldLoader center /></div>
+        <div className="relative h-64"><Loader center /></div>
       ) : (
         <>
           <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
-            <Kpi label="Model AUPRC" value={model ? auprc.toFixed(3) : "—"} tone="text-neon-green" />
-            <Kpi label="Ledger Entries" value={ledger ? String(totalEntries) : "—"} />
-            <Kpi label="Chain Head" value={ledger?.chain_head ? `${ledger.chain_head.slice(0, 10)}…` : "—"} tone="text-gold-400" />
-            <Kpi label="Integrity" value={chainVerified ? "OK (VERIFIED)" : "CHECK"} tone={chainVerified ? "text-neon-green" : "text-warn"} />
+            <Kpi label="Model AUPRC" value={model ? auprc.toFixed(3) : "â€”"} tone="text-risk-low" />
+            <Kpi label="Ledger Entries" value={ledger ? String(totalEntries) : "â€”"} />
+            <Kpi label="Chain Head" value={ledger?.chain_head ? `${ledger.chain_head.slice(0, 10)}â€¦` : "â€”"} tone="text-accent" />
+            <Kpi label="Integrity" value={chainVerified ? "OK (VERIFIED)" : "CHECK"} tone={chainVerified ? "text-risk-low" : "text-warn"} />
           </div>
 
           <div className="grid gap-4 lg:grid-cols-2">
             <div className="glass p-5">
-              <h2 className="mb-3 font-grotesk text-sm font-semibold tracking-widest text-text-muted">MODEL QUALITY (HOLD-OUT)</h2>
+              <h2 className="mb-3 font-sans text-sm font-semibold tracking-widest text-text-muted">MODEL QUALITY (HOLD-OUT)</h2>
               <ResponsiveContainer width="100%" height={220}>
                 <BarChart data={modelMetrics} margin={{ top: 8, right: 8, left: -18, bottom: 0 }}>
                   <XAxis dataKey="name" stroke="var(--color-text-muted)" fontSize={11} tickLine={false} />
@@ -108,7 +108,7 @@ export default function DashboardOverview() {
             </div>
 
             <div className="glass p-5">
-              <h2 className="mb-3 font-grotesk text-sm font-semibold tracking-widest text-text-muted">LEDGER FLOW</h2>
+              <h2 className="mb-3 font-sans text-sm font-semibold tracking-widest text-text-muted">LEDGER FLOW</h2>
               <ResponsiveContainer width="100%" height={220}>
                 <PieChart>
                   <Pie data={pieData} dataKey="value" nameKey="name" innerRadius={50} outerRadius={90} paddingAngle={3}>
@@ -132,18 +132,18 @@ export default function DashboardOverview() {
       )}
 
       <div className="glass p-5">
-        <div className="mb-3 flex items-center gap-2 font-grotesk text-sm font-semibold tracking-widest text-text-muted">
+        <div className="mb-3 flex items-center gap-2 font-sans text-sm font-semibold tracking-widest text-text-muted">
           LIVE ALERT STREAM
         </div>
         {latest ? (
           <StreamingText
             key={latest.id}
-            text={`[${new Date(latest.ts).toLocaleTimeString()}] ${latest.title} — ${latest.detail}`}
+            text={`[${new Date(latest.ts).toLocaleTimeString()}] ${latest.title} â€” ${latest.detail}`}
             speed={10}
             ariaLabel={latest.title}
           />
         ) : (
-          <p className="font-mono text-xs text-text-muted">awaiting alerts…</p>
+          <p className="font-mono text-xs text-text-muted">awaiting alertsâ€¦</p>
         )}
 
         <ul className="mt-4 space-y-1.5">

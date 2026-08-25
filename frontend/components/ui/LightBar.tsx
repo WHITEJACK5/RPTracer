@@ -1,11 +1,11 @@
-"use client";
+﻿"use client";
 
 import { motion, useReducedMotion } from "framer-motion";
 import { cn } from "@/lib/utils";
 
 /**
  * Fixed 3px accent bar pinned to the top of the viewport. A gradient sweep
- * (transparent → gold-400 → neon-green → transparent) travels left→right every
+ * (transparent â†’ gold-400 â†’ neon-green â†’ transparent) travels leftâ†’right every
  * 3s and emits a neon glow in dark mode. Honors `prefers-reduced-motion`.
  */
 export default function LightBar({ className }: { className?: string }) {
@@ -28,7 +28,7 @@ export default function LightBar({ className }: { className?: string }) {
           style={{
             background:
               "linear-gradient(90deg, transparent 0%, var(--color-gold-400) 45%, var(--color-neon-green) 55%, transparent 100%)",
-            boxShadow: "0 0 12px 1px var(--shadow-gold)",
+            boxShadow: "0 0 12px 1px var(--shadow-accent)",
           }}
           initial={{ x: "-100%" }}
           animate={{ x: "100%" }}

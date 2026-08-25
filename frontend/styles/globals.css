@@ -4,29 +4,37 @@
 
 /* ============================================================================
    TRACER design tokens — light + .dark
-   Every visual primitive is a CSS variable. Components MUST NOT hardcode hex.
+   Dark mode is primary. Every visual primitive is a CSS variable; components
+   MUST NOT hardcode hex. Accent / risk / entity tokens are identical in both
+   modes — only surface/text/border repaint.
    ========================================================================== */
 :root {
-  --color-bg-primary: #f5f6fb;
+  --color-bg-primary: #f7f8fa;
   --color-bg-secondary: #ffffff;
-  --color-bg-tertiary: #eceff6;
-  --color-surface: rgba(255, 255, 255, 0.72);
-  --color-surface-strong: #ffffff;
-  --color-border: rgba(11, 13, 22, 0.1);
-  --color-border-strong: rgba(11, 13, 22, 0.16);
-  --color-text-primary: #0c0e16;
-  --color-text-secondary: #3a3f4d;
-  --color-text-muted: #6b7280;
-  --color-gold-400: #f5c451;
-  --color-gold-500: #e0a83a;
-  --color-gold-600: #c98f24;
-  --color-neon-green: #1faa5b;
-  --color-neon-green-soft: #4fd690;
-  --color-danger: #e23b3b;
-  --color-warn: #d98813;
-  --color-ok: #15924a;
-  --shadow-gold: 0 0 22px -6px rgba(224, 168, 58, 0.5);
-  --shadow-neon: 0 0 22px -6px rgba(31, 170, 91, 0.45);
+  --color-bg-tertiary: #eef1f5;
+  --color-surface: rgba(255, 255, 255, 0.8);
+  --color-border: rgba(15, 23, 42, 0.08);
+  --color-border-strong: rgba(15, 23, 42, 0.16);
+  --color-text-primary: #0f172a;
+  --color-text-secondary: #475569;
+  --color-text-muted: #94a3b8;
+
+  --color-accent: #3b82f6;
+  --color-accent-hover: #2563eb;
+
+  --color-risk-low: #22c55e;
+  --color-risk-medium: #f59e0b;
+  --color-risk-high: #ef4444;
+
+  --color-entity-device: #64748b;
+  --color-entity-vpa: #38bdf8;
+  --color-entity-card: #a78bfa;
+  --color-entity-ip: #94a3b8;
+  --color-entity-email: #f472b6;
+  --color-entity-customer: #2dd4bf;
+  --color-entity-mule: var(--color-risk-high);
+
+  --shadow-accent: 0 0 18px -4px rgba(59, 130, 246, 0.5);
   --radius-sm: 8px;
   --radius-md: 14px;
   --radius-lg: 22px;
@@ -36,49 +44,17 @@
 }
 
 .dark {
-  --color-bg-primary: #07070b;
-  --color-bg-secondary: #0c0d14;
-  --color-bg-tertiary: #121320;
-  --color-surface: rgba(18, 18, 26, 0.7);
-  --color-surface-strong: rgba(20, 20, 30, 0.92);
+  --color-bg-primary: #0a0e14;
+  --color-bg-secondary: #0f141c;
+  --color-bg-tertiary: #161c26;
+  --color-surface: rgba(22, 28, 38, 0.7);
   --color-border: rgba(255, 255, 255, 0.08);
   --color-border-strong: rgba(255, 255, 255, 0.14);
-  --color-text-primary: #e7e9f2;
-  --color-text-secondary: #aab1c5;
-  --color-text-muted: #6b7280;
-  --color-gold-400: #f7cf63;
-  --color-gold-500: #e0a83a;
-  --color-gold-600: #c98f24;
-  --color-neon-green: #36f08a;
-  --color-neon-green-soft: #6cf0ab;
-  --color-danger: #ef4444;
-  --color-warn: #f59e0b;
-  --color-ok: #36f08a;
-  --shadow-gold: 0 0 26px -4px rgba(224, 168, 58, 0.55);
-  --shadow-neon: 0 0 26px -4px rgba(54, 240, 138, 0.55);
-  --radius-sm: 8px;
-  --radius-md: 14px;
-  --radius-lg: 22px;
-  --font-inter: "Inter", system-ui, sans-serif;
-  --font-mono: "JetBrains Mono", ui-monospace, monospace;
-  color-scheme: dark;
-}
+  --color-text-primary: #e8ecf2;
+  --color-text-secondary: #9aa5b5;
+  --color-text-muted: #5c6577;
 
-/* Data-visualization palette (entity types, chart series). Declared here so
-   components reference them via var() and stay free of hardcoded hex. */
-:root,
-.dark {
-  --data-device: #a855f7;
-  --data-vpa: #00d4aa;
-  --data-card: #60a5fa;
-  --data-ip: #94a3b8;
-  --data-email: #f59e0b;
-  --data-customer: #64748b;
-  --data-mule: #ef4444;
-  --chart-low: var(--color-neon-green);
-  --chart-med: var(--color-gold-500);
-  --chart-high: var(--color-danger);
-  --chart-grid: rgba(255, 255, 255, 0.06);
+  color-scheme: dark;
 }
 
 @layer base {
@@ -100,7 +76,7 @@
     min-height: 100vh;
   }
 
-  /* Grainy-black noise overlay — only in dark mode */
+  /* Grainy-noise overlay — only in dark mode */
   .dark::before {
     content: "";
     position: fixed;
@@ -112,8 +88,8 @@
   }
 
   ::selection {
-    background: var(--color-gold-500);
-    color: #07070b;
+    background: var(--color-accent);
+    color: #0a0e14;
   }
 }
 
@@ -132,9 +108,9 @@
   .text-gradient {
     background-image: linear-gradient(
       92deg,
-      var(--color-gold-400) 0%,
-      var(--color-gold-500) 35%,
-      var(--color-neon-green) 100%
+      var(--color-accent) 0%,
+      var(--color-entity-vpa) 50%,
+      var(--color-risk-low) 100%
     );
     -webkit-background-clip: text;
     background-clip: text;
@@ -160,7 +136,7 @@
     height: 8px;
   }
   .terminal-scroll::-webkit-scrollbar-thumb {
-    background: color-mix(in srgb, var(--color-neon-green) 35%, transparent);
+    background: color-mix(in srgb, var(--color-accent) 35%, transparent);
     border-radius: 8px;
   }
   .terminal-scroll::-webkit-scrollbar-track {

@@ -1,23 +1,23 @@
-"use client";
+﻿"use client";
 
 import { useLedger, useLedgerStats } from "@/hooks/useApi";
-import GoldLoader from "@/components/ui/GoldLoader";
+import Loader from "@/components/ui/Loader";
 import StreamingText from "@/components/ui/StreamingText";
 import TextReveal from "@/components/ui/TextReveal";
 import type { LedgerEntry, LedgerStat } from "@/lib/types";
 
 function buildReport(stats: LedgerStat | undefined, rows: LedgerEntry[]): string {
-  if (!stats) return "Ledger unavailable — engine offline.";
+  if (!stats) return "Ledger unavailable â€” engine offline.";
   const verified = stats.chain_verified ?? stats.integrity_ok ?? true;
   const entries = stats.entries ?? stats.total_entries ?? 0;
   const head = stats.chain_head ?? stats.last_hash ?? "GENESIS";
   const safeRows = Array.isArray(rows) ? rows : [];
-  const recent = safeRows.slice(0, 4).map((r) => `- \`${r.event_id}\` ${r.action} (${r.direction}) ₹${r.amount}`).join("\n");
-  return `**Hash-chained audit ledger** — integrity ${verified ? "VERIFIED ✓" : "BROKEN ✗"}
+  const recent = safeRows.slice(0, 4).map((r) => `- \`${r.event_id}\` ${r.action} (${r.direction}) â‚¹${r.amount}`).join("\n");
+  return `**Hash-chained audit ledger** â€” integrity ${verified ? "VERIFIED âœ“" : "BROKEN âœ—"}
 
 - Total entries: **${entries}**
 - Ledger file: \`${stats.path ?? "ledger.jsonl"}\`
-- Chain head: \`${head.slice(0, 16)}…\`
+- Chain head: \`${head.slice(0, 16)}â€¦\`
 
 Recent writes:
 ${recent || "- No recent entries recorded"}`;
@@ -31,7 +31,7 @@ export default function LedgerPage() {
 
   return (
     <div className="flex flex-col gap-6">
-      <TextReveal as="h1" text="Audit Ledger" by="char" className="font-grotesk text-3xl font-bold text-text-primary" />
+      <TextReveal as="h1" text="Audit Ledger" by="char" className="font-sans text-3xl font-bold text-text-primary" />
 
       <div className="glass p-6">
         <h2 className="mb-3 font-mono text-[10px] uppercase tracking-wider text-text-muted">INTEGRITY REPORT</h2>
@@ -43,7 +43,7 @@ export default function LedgerPage() {
           CHAIN ENTRIES
         </div>
         {isLoading ? (
-          <div className="relative h-48"><GoldLoader center /></div>
+          <div className="relative h-48"><Loader center /></div>
         ) : (
           <div className="terminal-scroll max-h-[420px] overflow-y-auto">
             <table className="w-full text-left text-sm">
@@ -63,7 +63,7 @@ export default function LedgerPage() {
                     <td className="px-3 py-2.5 font-mono text-[12px] text-text-secondary">{r.event_id}</td>
                     <td className="px-3 py-2.5 text-text-primary">{r.action}</td>
                     <td className="px-3 py-2.5 text-text-secondary">{r.actor}</td>
-                    <td className="px-3 py-2.5 font-mono text-[11px] text-neon-green/80">{r.hash.slice(0, 12)}…</td>
+                    <td className="px-3 py-2.5 font-mono text-[11px] text-risk-low/80">{r.hash.slice(0, 12)}â€¦</td>
                   </tr>
                 ))}
               </tbody>

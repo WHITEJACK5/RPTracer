@@ -9,12 +9,12 @@ const SIZES = {
 } as const;
 
 /**
- * Themed spinner in gold + neon-green. `size` controls dimensions; `center`
+ * Themed spinner in accent blue. `size` controls dimensions; `center`
  * absolutely centers it within a relative parent (or the viewport when used
  * standalone). Pure CSS animation — no layout thrash, reduced-motion safe by
  * virtue of being a non-essential decorative loader.
  */
-export default function GoldLoader({
+export default function Loader({
   size = "md",
   center = false,
   label,
@@ -43,9 +43,9 @@ export default function GoldLoader({
           s.border
         )}
         style={{
-          borderTopColor: "var(--color-gold-400)",
-          borderRightColor: "var(--color-neon-green)",
-          boxShadow: "0 0 14px -4px var(--shadow-gold)",
+          borderTopColor: "var(--color-accent)",
+          borderRightColor: "var(--color-accent-hover)",
+          boxShadow: "0 0 14px -4px var(--shadow-accent)",
         }}
       />
       {label && <span className="font-mono text-xs text-text-muted">{label}</span>}

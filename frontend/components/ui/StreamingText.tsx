@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useReducedMotion } from "framer-motion";
 import { useEffect, useRef, useState } from "react";
@@ -71,10 +71,10 @@ export default function StreamingText({
         <div className="prose-invert max-w-none">
           <ReactMarkdown
             components={{
-              a: ({ node, ...p }) => <a {...p} className="text-neon-green underline" />,
+              a: ({ node, ...p }) => <a {...p} className="text-risk-low underline" />,
               strong: ({ node, ...p }) => <strong {...p} className="text-text-primary" />,
               code: ({ node, ...p }) => (
-                <code {...p} className="rounded bg-bg-tertiary px-1 text-gold-400" />
+                <code {...p} className="rounded bg-bg-tertiary px-1 text-accent" />
               ),
             }}
           >
@@ -85,7 +85,7 @@ export default function StreamingText({
         shown
       )}
       {!reduced && !cursorFaded && (
-        <span className="ml-0.5 inline-block animate-blink text-neon-green">▊</span>
+        <span className="ml-0.5 inline-block animate-blink text-risk-low">â–Š</span>
       )}
     </div>
   );

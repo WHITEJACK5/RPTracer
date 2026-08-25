@@ -1,11 +1,11 @@
-"use client";
+﻿"use client";
 
 import { type FormEvent, useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import LumaDotBackground from "@/components/ui/LumaDotBackground";
+import DotBackground from "@/components/ui/DotBackground";
 import GlassForm from "@/components/ui/GlassForm";
-import { GoldInput } from "@/components/ui/GoldInput";
+import { Input } from "@/components/ui/Input";
 import TextReveal from "@/components/ui/TextReveal";
 
 export default function LoginPage() {
@@ -26,17 +26,17 @@ export default function LoginPage() {
 
   return (
     <div className="relative flex min-h-screen items-center justify-center px-4">
-      <LumaDotBackground />
+      <DotBackground />
       <div className="relative w-full max-w-md">
         <div className="mb-6 text-center">
-          <TextReveal as="h1" text="Analyst Sign-in" by="char" className="font-grotesk text-3xl font-bold text-text-primary" />
+          <TextReveal as="h1" text="Analyst Sign-in" by="char" className="font-sans text-3xl font-bold text-text-primary" />
           <p className="mt-2 text-sm text-text-secondary">Secure access to the TRACER risk console.</p>
         </div>
         <GlassForm title="" onSubmit={onSubmit} submitLabel="Sign in" submitting={submitting}>
-          <GoldInput label="Work email" name="email" type="email" placeholder="analyst@razorpay.com" required />
-          <GoldInput label="Passphrase" name="password" type="password" placeholder="••••••••" required />
+          <Input label="Work email" name="email" type="email" placeholder="analyst@razorpay.com" required />
+          <Input label="Passphrase" name="password" type="password" placeholder="â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢" required />
         </GlassForm>
-        <p className="mt-4 text-center font-mono text-[10px] text-text-muted">DEFENSE-ONLY · AUDITED · COMPLIANT</p>
+        <p className="mt-4 text-center font-mono text-[10px] text-text-muted">Demo Access — No credentials required for judging Â· COMPLIANT</p>
       </div>
     </div>
   );
