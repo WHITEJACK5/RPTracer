@@ -40,6 +40,9 @@ from backend.app.api.v1 import (
 from backend.app.api.v1 import (
     webhooks as webhook_router,
 )
+from backend.app.api.v1 import (
+    reviews as reviews_router,
+)
 from backend.app.core.config import CORS_ORIGINS, DATA_DIR, settings
 from backend.app.core.idempotency import IdempotencyMiddleware
 from backend.app.core.metrics import render_metrics
@@ -142,6 +145,7 @@ def create_app() -> FastAPI:
     app.include_router(model_router.router)
     app.include_router(webhook_router.router)
     app.include_router(alerts_router.router)
+    app.include_router(reviews_router.router)
 
     # --- Prometheus metrics ------------------------------------------------
     @app.get("/metrics", include_in_schema=False)

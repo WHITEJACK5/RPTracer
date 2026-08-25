@@ -1,0 +1,130 @@
+{
+  "__inputs": [
+    {
+      "name": "DS_PROMETHEUS",
+      "label": "Prometheus",
+      "description": "Prometheus datasource for TRACER metrics",
+      "type": "datasource",
+      "pluginId": "prometheus",
+      "pluginName": "Prometheus"
+    }
+  ],
+  "title": "TRACER v2.0 — Risk Engine Dashboard",
+  "uid": "tracer-risk-engine",
+  "description": "Real-time risk engine telemetry, decision distribution, drift, and review queue backlog.",
+  "timezone": "browser",
+  "refresh": "10s",
+  "time": { "from": "now-1h", "to": "now" },
+  "panels": [
+    {
+      "title": "Review Queue Backlog",
+      "type": "stat",
+      "gridPos": { "h": 4, "w": 6, "x": 0, "y": 0 },
+      "targets": [
+        {
+          "expr": "tracer_review_queue_size",
+          "legendFormat": "Pending reviews"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "thresholds": {
+            "steps": [
+              { "color": "green", "value": 0 },
+              { "color": "yellow", "value": 10 },
+              { "color": "red", "value": 50 }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "title": "Graph Node Count",
+      "type": "stat",
+      "gridPos": { "h": 4, "w": 6, "x": 6, "y": 0 },
+      "targets": [
+        {
+          "expr": "tracer_graph_nodes_total",
+          "legendFormat": "Nodes"
+        }
+      ]
+    },
+    {
+      "title": "Model Drift (PSI)",
+      "type": "stat",
+      "gridPos": { "h": 4, "w": 6, "x": 12, "y": 0 },
+      "targets": [
+        {
+          "expr": "tracer_model_drift_score",
+          "legendFormat": "PSI"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "thresholds": {
+            "steps": [
+              { "color": "green", "value": 0 },
+              { "color": "yellow", "value": 0.1 },
+              { "color": "red", "value": 0.2 }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "title": "Scoring Latency (p50/p95/p99)",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 4 },
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.50, rate(tracer_scoring_latency_seconds_bucket[5m]))",
+          "legendFormat": "p50"
+        },
+        {
+          "expr": "histogram_quantile(0.95, rate(tracer_scoring_latency_seconds_bucket[5m]))",
+          "legendFormat": "p95"
+        },
+        {
+          "expr": "histogram_quantile(0.99, rate(tracer_scoring_latency_seconds_bucket[5m]))",
+          "legendFormat": "p99"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s"
+        }
+      }
+    },
+    {
+      "title": "Decision Band Distribution",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 4 },
+      "targets": [
+        {
+          "expr": "increase(tracer_decisions_total{band=\"LOW\"}[5m])",
+          "legendFormat": "LOW (Auto-Approve)"
+        },
+        {
+          "expr": "increase(tracer_decisions_total{band=\"MEDIUM\"}[5m])",
+          "legendFormat": "MEDIUM (Step-Up)"
+        },
+        {
+          "expr": "increase(tracer_decisions_total{band=\"HIGH\"}[5m])",
+          "legendFormat": "HIGH (Payout Hold)"
+        }
+      ]
+    },
+    {
+      "title": "Request Rate by Band",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 24, "x": 0, "y": 12 },
+      "targets": [
+        {
+          "expr": "sum(rate(tracer_decisions_total[1m])) by (band)",
+          "legendFormat": "{{band}}"
+        }
+      ]
+    }
+  ],
+  "schemaVersion": 39
+}

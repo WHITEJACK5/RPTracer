@@ -43,9 +43,5 @@ The following phases were **not fully implemented** in this pass. Rather than le
 - **Plan**: Deploy to a Linux VPS with Redis/Neo4j running, run `k6` or `locust` at 1,000 RPS sustained concurrency, and report p50/p95/p99 under load (not idle single-request latency).
 - **Current state**: The existing `scripts/bench_latency.py` measures sequential/concurrent latency on a local dev box, which is **not** a production-realistic load test. Local Windows localhost transport degrades under high concurrency (documented). Honest numbers require a dedicated Linux host.
 
-### Phase 7 — Review Queue & Observability Dashboards (Partially Done)
-- **Review Queue**: The audit ledger records all decisions with `pending_review` semantics in metadata, but a dedicated `GET /api/v1/reviews` endpoint for human triage and `POST /api/v1/reviews/{id}/label` for marking `confirmed_fraud` / `false_positive` have not been implemented.
-- **Grafana Dashboards**: The existing `/metrics` endpoint exposes all required Prometheus counters (`tracer_scoring_latency_seconds`, `tracer_decisions_total`, `tracer_graph_nodes_total`, `tracer_model_drift_score`), but a pre-built Grafana dashboard JSON has not been created. Importing the Prometheus metrics into any standard Grafana dashboard is a configuration step, not a code change.
-
 ### Walk-Forward Forecast Calibration (Partially Done)
 - Walk-forward lead time and false-alarm rate tests exist (Phase 3). However, the trajectory tracking EWMA slope is currently uncalibrated — the `EARLY_WARNING` threshold is a fixed 30-second forecast window rather than a learned threshold. Future work: calibrate the forecast window on historical data to minimize false alarms at the desired lead time.

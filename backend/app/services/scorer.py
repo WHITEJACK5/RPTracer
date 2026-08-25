@@ -215,13 +215,31 @@ async def run_pipeline(event: TransactionEvent,
         dossier_builder=generate_dossier, model_version=model.version(),
     )
     evaluation.degraded = model.is_degraded
+    decision_band = band_for(score)
 
+    # Phase 7: Insert HIGH-band decisions into human review queue
+    if decision_band == "HIGH":
+        from backend.app.services.review_queue import get_review_queue
+        from backend.app.core.metrics import review_queue_size
+        get_review_queue().insert(
+            event_id=event.event_id, risk_score=score, risk_band=decision_band,
+            decision=evaluation.decision.value, merchant_id=event.merchant_id,
+            model_version=model.version(), degraded=model.is_degraded,
+            feature_snapshot=feats, graph_evidence=gs,
+        )
+        counts = get_review_queue().count_by_status()
+        review_queue_size.set(counts.get("pending_review", 0))
+
+    # Phase 7: Enriched audit ledger — includes feature vector, model version, degraded flag
     audit_hash = get_ledger().append(
         debit_account=f"risk_engine::{event.event_id}",
         credit_account="merchant_protection",
         amount=float(score),
         refs={"event_id": event.event_id, "decision": evaluation.decision.value,
-              "band": band_for(score), "model": model.version()},
+              "band": decision_band, "model": model.version(),
+              "degraded": model.is_degraded,
+              "code_path": "calibrated_linear" if model.is_degraded else "xgboost",
+              "feature_snapshot": {k: round(v, 4) for k, v in feats.items()}},
     )
     evaluation.audit_ref = f"audit::{audit_hash[:24]}"
     evaluation.latency_ms = round((time.perf_counter() - t0) * 1000, 2)

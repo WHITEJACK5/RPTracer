@@ -21,6 +21,7 @@ METRIC_SCORING_LATENCY = "tracer_scoring_latency_seconds"
 METRIC_DECISIONS = "tracer_decisions_total"
 METRIC_GRAPH_NODES = "tracer_graph_nodes_total"
 METRIC_MODEL_DRIFT = "tracer_model_drift_score"
+METRIC_REVIEW_QUEUE = "tracer_review_queue_size"
 
 # Histogram buckets required by the spec (plus wider tails for p99 visibility).
 SCORING_LATENCY_BUCKETS = (0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1.0, 2.5, 5.0)

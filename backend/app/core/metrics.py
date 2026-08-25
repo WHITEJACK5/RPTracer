@@ -17,6 +17,7 @@ from backend.app.core.constants import (
     METRIC_DECISIONS,
     METRIC_GRAPH_NODES,
     METRIC_MODEL_DRIFT,
+    METRIC_REVIEW_QUEUE,
     METRIC_SCORING_LATENCY,
     SCORING_LATENCY_BUCKETS,
 )
@@ -45,6 +46,12 @@ graph_nodes = Gauge(
 model_drift = Gauge(
     METRIC_MODEL_DRIFT,
     "Population Stability Index of incoming features vs training baseline.",
+)
+
+# Review queue backlog gauge (pending human triage decisions).
+review_queue_size = Gauge(
+    METRIC_REVIEW_QUEUE,
+    "Number of HIGH-band decisions pending human review.",
 )
 
 
