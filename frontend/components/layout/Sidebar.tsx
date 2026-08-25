@@ -1,14 +1,15 @@
 ﻿"use client";
 
-import { Activity, FileText, LayoutDashboard, Network, Settings, ShieldAlert } from "lucide-react";
+import { Activity, Beaker, FileText, LayoutDashboard, Network, Settings, ShieldAlert } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import AvatarList from "@/components/ui/AvatarList";
 import { useAnalysts } from "@/hooks/useApi";
 import { cn } from "@/lib/utils";
 
-const NAV = [
+export const NAV = [
   { href: "/dashboard", label: "Overview", icon: LayoutDashboard },
+  { href: "/dashboard/sandbox", label: "Sandbox", icon: Beaker },
   { href: "/dashboard/transactions", label: "Transactions", icon: Activity },
   { href: "/dashboard/graph", label: "Graph", icon: Network },
   { href: "/dashboard/ledger", label: "Ledger", icon: FileText },

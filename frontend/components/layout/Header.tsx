@@ -1,44 +1,148 @@
 ﻿"use client";
 
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
+import { usePathname } from "next/navigation";
+import { Menu, X } from "lucide-react";
+import { NAV } from "@/components/layout/Sidebar";
 import ThemeToggle from "./ThemeToggle";
+import { cn } from "@/lib/utils";
 
-/** Top app bar: brand, optional nav links, and the light/dark theme toggle. */
+/** Top app bar: brand, optional nav links, theme toggle, and mobile hamburger. */
 export default function Header({
   links,
 }: {
   links?: { href: string; label: string }[];
 }) {
+  const pathname = usePathname();
+  const [drawerOpen, setDrawerOpen] = useState(false);
+  const drawerRef = useRef<HTMLDivElement>(null);
+  const firstLinkRef = useRef<HTMLAnchorElement>(null);
+
+  // Close drawer on route change
+  useEffect(() => {
+    setDrawerOpen(false);
+  }, [pathname]);
+
+  // Close drawer on Escape
+  useEffect(() => {
+    if (!drawerOpen) return;
+    const handler = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setDrawerOpen(false);
+    };
+    document.addEventListener("keydown", handler);
+    return () => document.removeEventListener("keydown", handler);
+  }, [drawerOpen]);
+
+  // Focus trap: focus first link when drawer opens
+  useEffect(() => {
+    if (drawerOpen) {
+      setTimeout(() => firstLinkRef.current?.focus(), 50);
+    }
+  }, [drawerOpen]);
+
+  // Prevent body scroll when drawer open
+  useEffect(() => {
+    if (drawerOpen) {
+      document.body.style.overflow = "hidden";
+    } else {
+      document.body.style.overflow = "";
+    }
+    return () => { document.body.style.overflow = ""; };
+  }, [drawerOpen]);
+
   return (
-    <header className="sticky top-0 z-40 border-b border-border bg-bg-primary/70 backdrop-blur-2xl">
-      <div className="mx-auto flex h-16 max-w-[1500px] items-center gap-5 px-5">
-        <Link href="/" className="flex items-center gap-3">
-          <svg width="32" height="32" viewBox="0 0 40 40" fill="none" aria-hidden>
-            <circle cx="20" cy="20" r="17.5" stroke="var(--color-gold-500)" strokeWidth="1.6" />
-            <circle cx="20" cy="20" r="10.5" stroke="var(--color-neon-green)" strokeOpacity="0.5" strokeWidth="1.3" />
-            <circle cx="20" cy="20" r="3.4" fill="var(--color-gold-400)" />
-            <line x1="20" y1="20" x2="33.5" y2="9.5" stroke="var(--color-neon-green)" strokeWidth="1.8" strokeLinecap="round" />
-          </svg>
-          <span className="font-sans text-xl font-bold tracking-tight text-gradient">TRACER</span>
-        </Link>
+    <>
+      <header className="sticky top-0 z-40 border-b border-border bg-bg-primary/70 backdrop-blur-2xl">
+        <div className="mx-auto flex h-16 max-w-[1500px] items-center gap-5 px-5">
+          <Link href="/" className="flex items-center gap-3">
+            <svg width="32" height="32" viewBox="0 0 40 40" fill="none" aria-hidden>
+              <circle cx="20" cy="20" r="17.5" stroke="var(--color-accent)" strokeWidth="1.6" />
+              <circle cx="20" cy="20" r="10.5" stroke="var(--color-accent)" strokeOpacity="0.5" strokeWidth="1.3" />
+              <circle cx="20" cy="20" r="3.4" fill="var(--color-accent)" />
+              <line x1="20" y1="20" x2="33.5" y2="9.5" stroke="var(--color-accent)" strokeWidth="1.8" strokeLinecap="round" />
+            </svg>
+            <span className="font-sans text-xl font-bold tracking-tight text-gradient">TRACER</span>
+          </Link>
 
-        {links && links.length > 0 && (
-          <nav className="ml-4 hidden items-center gap-1 md:flex">
-            {links.map((l) => (
-              <Link
-                key={l.href}
-                href={l.href}
-                className="rounded-md px-3 py-1.5 text-sm text-text-secondary transition-colors hover:bg-bg-tertiary hover:text-text-primary"
-              >
-                {l.label}
-              </Link>
-            ))}
-          </nav>
+          {links && links.length > 0 && (
+            <nav className="ml-4 hidden items-center gap-1 md:flex">
+              {links.map((l) => (
+                <Link
+                  key={l.href}
+                  href={l.href}
+                  className="rounded-md px-3 py-1.5 text-sm text-text-secondary transition-colors hover:bg-bg-tertiary hover:text-text-primary"
+                >
+                  {l.label}
+                </Link>
+              ))}
+            </nav>
+          )}
+
+          <div className="flex-1" />
+          <ThemeToggle />
+
+          {/* Hamburger — visible below md */}
+          <button
+            className="flex items-center justify-center rounded-md p-2 text-text-secondary hover:bg-bg-tertiary md:hidden"
+            onClick={() => setDrawerOpen(!drawerOpen)}
+            aria-label={drawerOpen ? "Close menu" : "Open menu"}
+          >
+            {drawerOpen ? <X size={20} /> : <Menu size={20} />}
+          </button>
+        </div>
+      </header>
+
+      {/* Mobile drawer backdrop */}
+      {drawerOpen && (
+        <div
+          className="fixed inset-0 z-50 bg-black/40 md:hidden"
+          onClick={() => setDrawerOpen(false)}
+          aria-hidden="true"
+        />
+      )}
+
+      {/* Mobile drawer */}
+      <nav
+        ref={drawerRef}
+        className={cn(
+          "fixed right-0 top-0 z-50 h-full w-64 flex-col border-l border-border bg-bg-secondary px-4 py-6 shadow-lg transition-transform duration-200 md:hidden",
+          drawerOpen ? "translate-x-0" : "translate-x-full"
         )}
-
-        <div className="flex-1" />
-        <ThemeToggle />
-      </div>
-    </header>
+        aria-label="Mobile navigation"
+      >
+        <div className="mb-4 flex items-center justify-between">
+          <span className="text-sm font-semibold text-text-primary">Navigation</span>
+          <button
+            className="rounded p-1 text-text-secondary hover:bg-bg-tertiary"
+            onClick={() => setDrawerOpen(false)}
+            aria-label="Close menu"
+          >
+            <X size={18} />
+          </button>
+        </div>
+        <div className="flex flex-col gap-1">
+          {NAV.map(({ href, label, icon: Icon }, idx) => {
+            const active = pathname === href;
+            return (
+              <Link
+                key={href}
+                ref={idx === 0 ? firstLinkRef : undefined}
+                href={href}
+                className={cn(
+                  "flex items-center gap-3 rounded-md px-3 py-2.5 text-sm transition-colors",
+                  active
+                    ? "bg-surface text-text-primary shadow-accent"
+                    : "text-text-secondary hover:bg-bg-tertiary hover:text-text-primary"
+                )}
+              >
+                <Icon size={17} className={active ? "text-accent" : ""} />
+                {label}
+              </Link>
+            );
+          })}
+        </div>
+      </nav>
+    </>
   );
 }
