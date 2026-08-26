@@ -36,7 +36,7 @@ export default function LoginPage() {
           <Input label="Work email" name="email" type="email" placeholder="analyst@razorpay.com" required />
           <Input label="Passphrase" name="password" type="password" placeholder="â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢" required />
         </GlassForm>
-        <p className="mt-4 text-center font-mono text-[10px] text-text-muted">Demo Access — No credentials required for judging Â· COMPLIANT</p>
+        <p className="mt-4 text-center font-mono text-[10px] text-text-muted">Simulated auth for demo — no real credentials checked · COMPLIANT</p>
       </div>
     </div>
   );

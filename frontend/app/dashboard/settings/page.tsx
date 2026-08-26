@@ -27,8 +27,8 @@ export default function SettingsPage() {
       <div className="grid gap-6 lg:grid-cols-2">
         <GlassForm title="Engine configuration" description="Connection and alerting thresholds." onSubmit={onSave} submitLabel="Save settings">
           <Input label="API base URL" name="apiBase" placeholder="http://127.0.0.1:8000" defaultValue={process.env.NEXT_PUBLIC_API_BASE ?? ""} hint="Env: NEXT_PUBLIC_API_BASE" />
-          <Input label="Alert risk threshold" name="threshold" type="number" placeholder="70" defaultValue="70" />
-          <Input label="Webhook URL" name="webhook" placeholder="https://hooks.razorpay.com/â€¦" />
+          <Input label="Alert risk threshold" name="threshold" type="number" placeholder="70" defaultValue="70" disabled hint="Coming soon — policy bands are currently hardcoded" />
+          <Input label="Webhook URL" name="webhook" placeholder="https://hooks.razorpay.com/..." disabled hint="Coming soon — webhook integration pending" />
         </GlassForm>
 
         <div className="glass flex flex-col gap-4 p-6">
