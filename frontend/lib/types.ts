@@ -18,7 +18,7 @@ export type GraphEvidence = {
   mule_nodes: string[];
   shared_device_vpas: number;
   ring_detected: boolean;
-  ring_confidence: number;
+  ring_structural_ratio: number;
   summary: string;
 };
 

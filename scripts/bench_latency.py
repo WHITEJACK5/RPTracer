@@ -91,7 +91,9 @@ def main() -> None:
         env={**__import__("os").environ,
              "PORT": str(PORT),
              "OMP_NUM_THREADS": "1",          # xgboost predict: no all-core fan-out
-             "MKL_NUM_THREADS": "1"},
+             "MKL_NUM_THREADS": "1",
+             "RATE_LIMIT_IP_PER_MIN": "99999",
+             "RATE_LIMIT_MERCHANT_PER_MIN": "99999"},
     )
     try:
         with httpx.Client() as c:

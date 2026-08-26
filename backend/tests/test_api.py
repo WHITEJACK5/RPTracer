@@ -159,7 +159,7 @@ def test_frontend_contract_fields_present(client, normal_upi):
         assert set(step) >= {"ts_ms", "actor", "message", "level"}
     graph = body["graph_evidence"]
     for key in ("component_size", "mule_nodes", "shared_device_vpas",
-                "ring_detected", "ring_confidence", "summary"):
+                "ring_detected", "ring_structural_ratio", "summary"):
         assert key in graph
 
     # presets endpoint must serve exactly the shape PayloadSandbox hydrates with

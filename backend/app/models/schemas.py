@@ -90,7 +90,7 @@ class GraphEvidence(BaseModel):
     mule_nodes: list[str] = Field(default_factory=list)
     shared_device_vpas: int = 1
     ring_detected: bool = False
-    ring_confidence: float = 0.0
+    ring_structural_ratio: float = 0.0
     summary: str = ""
 
 

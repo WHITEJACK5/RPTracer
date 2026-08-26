@@ -10,7 +10,9 @@ import math
 import numpy as np
 from typing import Any
 
-# Structural feature weights trained on held-out topology graphs
+# Structural feature weights — hand-tuned heuristic weights, NOT trained on data.
+# There is no training script or training data producing these numbers;
+# they reflect engineering domain knowledge about ring topology patterns.
 # Features: [fan_out, vpa_degree, card_share, ip_crowding, component_size, device_rotation, ewma_slope]
 _COEFFS = np.array([0.85, 0.45, 0.65, 0.35, 0.25, 1.40, 0.90])
 _INTERCEPT = -4.20

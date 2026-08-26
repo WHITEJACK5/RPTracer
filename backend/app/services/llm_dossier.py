@@ -172,7 +172,7 @@ def _template_dossier(
     shap: list[ShapContribution],
     graph: GraphEvidence,
 ) -> DisputeDossier:
-    codes = compute_reason_codes({}, {"mule_ring_score": graph.ring_confidence * 100}) \
+    codes = compute_reason_codes({}, {"mule_ring_score": graph.ring_structural_ratio * 100}) \
         if not shap else [c.feature.upper() for c in shap[:4]]
     vpa = _sanitize(ev.instrument.vpa or "—")
     device = _sanitize(ev.context.device_id or "—")

@@ -141,7 +141,7 @@ class MuleDetector:
             mule_nodes=mule_nodes[:20],
             shared_device_vpas=fan_vpas,
             ring_detected=ring,
-            ring_confidence=round(ring_ratio, 2),
+            ring_structural_ratio=round(ring_ratio, 2),
             summary=summary,
         )
         self._last_entities = touched

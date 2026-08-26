@@ -14,7 +14,7 @@ score each transaction in isolation and miss it; the topology gives it away.
 TRACER's detector runs on **graph topology heuristics — degree, fan-out,
 connected-component identity-mass analysis** (NetworkX; optional Neo4j mirror):
 
-- ≥4 payment identities on one device ⇒ ring flagged with confidence ≥72%
+- ≥4 payment identities on one device ⇒ ring flagged with structural ratio ≥0.72
 - Proven on **novel** rings assembled live through the public API
   (`backend/tests/test_graph_generalization.py`) — not just the seeded demo fixture
 - Negative control: benign household fan-out (1 device, 2–3 VPAs) does NOT fire;
@@ -50,15 +50,18 @@ flag riskiest 5%      : P=0.090  R=0.052  FP/1k-legit=49.8
 
 Read that honestly: on a deliberately hostile benchmark (confounder + annotation
 noise), the tabular GBDT reaches 83% of the theoretical ceiling but modest
-absolute lift. **This is exactly why ring detection — which is structural, not
-statistical — is the headline**, and why policy guardrails (hard floors on fan-out
+absolute lift. **The tabular score is a supplementary signal for SHAP explanations
+and policy-floor inputs, not a standalone detector — ring detection on graph
+topology is the actual headline claim.** Policy guardrails (hard floors on fan-out
 ≥5 devices etc.) guarantee HIGH-band escalation for extreme patterns regardless of
 model output.
 
-Real-data validation: `python scripts/train_real_data.py` trains a fresh model on
-the [IEEE-CIS Fraud Detection dataset](https://www.kaggle.com/c/ieee-fraud-detection)
+Real-data validation: `python scripts/train_real_data.py` is wired to train a fresh
+model on the [IEEE-CIS Fraud Detection dataset](https://www.kaggle.com/c/ieee-fraud-detection)
 (download required; the script prints instructions when absent and never invents
-numbers). Results are reported separately, labeled "real-data holdout".
+numbers). **This validation has not been run yet** — the script and column mapping
+are complete, but the IEEE-CIS dataset requires a Kaggle account download. This is
+a stated next step, not a completed result.
 
 ### Latency — measured, not invented
 
@@ -130,9 +133,33 @@ customers into verified sales. Humans adjudicate anything irreversible.
   data we don't have.
 - **Validated on**: decoupled synthetic GT (see above); IEEE-CIS mapping provided
   as script; live-API ring-recovery + negative-control tests.
-- **Known failure modes**: heavy label noise caps calibrated confidence (fixed
+- **Known failure modes**: heavy label noise caps structural confidence (fixed
   thresholds look sparse by design); confounder leakage if merchant mix shifts;
   graph features assume identifier stability (rotating devices evade fan-out).
+
+## Path to production (what this is not)
+
+This is a hackathon prototype, not a production deployment. A senior reviewer
+should know exactly what stands between this and a real system:
+
+- **Training data**: Real chargeback-labeled transaction data with a proper
+  time-based holdout (not synthetic ground truth with artificial label noise).
+- **Device fingerprinting**: A real vendor (e.g. FingerprintJS, ThreatMetrix)
+  instead of self-reported `device_id` — the current identifier is trivially
+  spoofed.
+- **Human review UI**: A queue for HIGH-band holds where analysts can approve,
+  escalate, or release within the 24h window.
+- **Compliance controls**: PCI-adjacent data handling, audit log retention,
+  PII redaction in LLM calls, SOC-2-style access controls.
+- **Incident response runbook**: What happens when the detector fires on a
+  legitimate customer during a festival sale spike? Who pages, what SLA?
+- **Multi-region failover**: The ledger and graph state are single-node in-memory.
+  Production requires Redis Cluster or equivalent for horizontal scaling.
+- **Real load testing**: Full 1,000+ RPS sustained concurrency on Linux with
+  Redis/Neo4j network hops, not localhost transport.
+
+Naming these gaps accurately, unprompted, is the point — not pretending they
+don't exist.
 
 ## Quickstart
 

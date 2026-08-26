@@ -142,7 +142,7 @@ def test_dispute_dossier_schema_bounds():
         "instrument": {"method": "upi", "vpa": "x@ybl"}})
     graph = GraphEvidence(component_size=42, mule_nodes=["vpa:a"] * 12,
                           shared_device_vpas=14, ring_detected=True,
-                          ring_confidence=0.93, summary="ring")
+                          ring_structural_ratio=0.93, summary="ring")
     shap = [ShapContribution(feature="device_fan_out", label="fan-out", value=14,
                              contribution=31.0, direction="RISK_UP")]
     dossier = generate_dossier(ev, 92, shap, graph)
@@ -173,7 +173,7 @@ def test_prompt_injection_is_neutralized():
         "event_id": "inj_1", "amount": 90000,
         "instrument": {"method": "upi", "vpa": attack}})
     graph = GraphEvidence(component_size=30, shared_device_vpas=9,
-                          ring_detected=True, ring_confidence=0.9,
+                          ring_detected=True, ring_structural_ratio=0.9,
                           summary="ring", mule_nodes=["vpa:a"] * 5)
     dossier = generate_dossier(ev, 91, [], graph)
     blob = json.dumps(dossier.model_dump())

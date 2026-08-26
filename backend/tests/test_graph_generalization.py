@@ -46,7 +46,7 @@ def test_mule_ring_detected_for_novel_device_never_seeded(client: TestClient):
     assert client.post(
         "/api/v1/risk/evaluate",
         json=_payload(device, "novel.mule5@ybl"),
-    ).json()["graph_evidence"]["ring_confidence"] >= 0.72
+    ).json()["graph_evidence"]["ring_structural_ratio"] >= 0.72
 
 
 def test_card_share_feature_not_silently_zero(client):

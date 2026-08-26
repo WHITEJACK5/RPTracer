@@ -39,9 +39,13 @@ This document provides a non-euphemistic statement of what TRACER v2.0 does and 
 
 The following phases were **not fully implemented** in this pass. Rather than leaving stale documentation implying completion, they are listed here with a plan for future work.
 
-### Phase 6 — Production Load Testing (Not Done)
+### Phase 6 — Production Load Testing (Partially Done)
 - **Plan**: Deploy to a Linux VPS with Redis/Neo4j running, run `k6` or `locust` at 1,000 RPS sustained concurrency, and report p50/p95/p99 under load (not idle single-request latency).
-- **Current state**: The existing `scripts/bench_latency.py` measures sequential/concurrent latency on a local dev box, which is **not** a production-realistic load test. Local Windows localhost transport degrades under high concurrency (documented). Honest numbers require a dedicated Linux host.
+- **Current state**: Small-scale concurrent numbers obtained on Windows dev box (see below). Full 1,000 RPS production test on Linux is still pending.
+- **Windows dev-box numbers** (`scripts/bench_latency.py`, single uvicorn, in-memory graph):
+  - Sequential (n=200, c=1): p50=100.9ms, p95=433.9ms, p99=983.2ms, 7 req/s
+  - Concurrent (n=600, c=10): p50=959.7ms, p95=1427.9ms, p99=1634.5ms, 10 req/s
+  - **Caveat**: Includes XGBoost model training at cold start (~50ms amortized). Windows localhost transport degrades under high concurrency even for hello-world; sequential figure is the representative single-request latency. Linux/uvloop production numbers will differ significantly.
 
 ### Walk-Forward Forecast Calibration (Partially Done)
 - Walk-forward lead time and false-alarm rate tests exist (Phase 3). However, the trajectory tracking EWMA slope is currently uncalibrated — the `EARLY_WARNING` threshold is a fixed 30-second forecast window rather than a learned threshold. Future work: calibrate the forecast window on historical data to minimize false alarms at the desired lead time.
