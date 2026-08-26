@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import Button from "@/components/ui/Button";
 import { useEvaluate } from "@/hooks/useApi";
 import type { RiskEvaluation } from "@/lib/types";
 
@@ -172,7 +171,7 @@ export default function LandingPage() {
         </span>
 
         <h1 className="font-mono text-3xl font-bold text-text-primary md:text-5xl">
-          Mule rings don't hide from topology
+          Mule rings don&#39;t hide from topology
           <br />
           <span className="font-bold text-accent">Real-time detection. Bounded response.</span>
         </h1>

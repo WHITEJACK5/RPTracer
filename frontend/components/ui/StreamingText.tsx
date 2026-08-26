@@ -71,9 +71,9 @@ export default function StreamingText({
         <div className="prose-invert max-w-none">
           <ReactMarkdown
             components={{
-              a: ({ node, ...p }) => <a {...p} className="text-risk-low underline" />,
-              strong: ({ node, ...p }) => <strong {...p} className="text-text-primary" />,
-              code: ({ node, ...p }) => (
+              a: ({ ...p }) => <a {...p} className="text-risk-low underline" />,
+              strong: ({ ...p }) => <strong {...p} className="text-text-primary" />,
+              code: ({ ...p }) => (
                 <code {...p} className="rounded bg-bg-tertiary px-1 text-accent" />
               ),
             }}

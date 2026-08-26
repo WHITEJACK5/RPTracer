@@ -33,6 +33,12 @@ const config: Config = {
         "entity-email": "var(--color-entity-email)",
         "entity-customer": "var(--color-entity-customer)",
         "entity-mule": "var(--color-entity-mule)",
+        danger: "var(--color-danger)",
+        ok: "var(--color-ok)",
+        warn: "var(--color-warn)",
+        "neon-green": "var(--color-neon-green)",
+        "gold-400": "var(--color-gold-400)",
+        "gold-500": "var(--color-gold-500)",
       },
       fontFamily: {
         sans: ["var(--font-inter)", "system-ui", "sans-serif"],
@@ -81,6 +87,6 @@ const config: Config = {
       },
     },
   },
-  plugins: [],
+  plugins: [require("@tailwindcss/typography")],
 };
 export default config;

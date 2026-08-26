@@ -1,12 +1,10 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { alertStreamUrl } from "@/lib/api";
+import { alertStreamUrl, API_BASE } from "@/lib/api";
 import type { LiveAlert } from "@/lib/types";
 
-const POLL_URL = `${typeof window !== "undefined" ? "" : ""}${
-  process.env.NEXT_PUBLIC_API_BASE ?? "http://127.0.0.1:8000"
-}/api/v1/alerts`;
+const POLL_URL = `${API_BASE}/api/v1/alerts`;
 
 function seed(): LiveAlert[] {
   return [

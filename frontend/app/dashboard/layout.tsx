@@ -4,6 +4,7 @@ import Sidebar from "@/components/layout/Sidebar";
 const LINKS = [
   { href: "/dashboard", label: "Overview" },
   { href: "/dashboard/transactions", label: "Transactions" },
+  { href: "/dashboard/sandbox", label: "Sandbox" },
   { href: "/dashboard/graph", label: "Graph" },
   { href: "/dashboard/ledger", label: "Ledger" },
   { href: "/dashboard/settings", label: "Settings" },

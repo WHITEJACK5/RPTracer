@@ -3,7 +3,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useEvaluate } from "@/hooks/useApi";
 import Button from "@/components/ui/Button";
-import { Input } from "@/components/ui/Input";
 import TextReveal from "@/components/ui/TextReveal";
 import type { RiskEvaluation, Preset } from "@/lib/types";
 import { cn } from "@/lib/utils";
@@ -128,7 +127,14 @@ export default function SandboxPage() {
   const [jsonInput, setJsonInput] = useState("");
   const [jsonError, setJsonError] = useState<string | null>(null);
   const termRef = useRef<HTMLDivElement>(null);
+  const ringIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const [typedLines, setTypedLines] = useState<string[]>([]);
+
+  useEffect(() => {
+    return () => {
+      if (ringIntervalRef.current) clearInterval(ringIntervalRef.current);
+    };
+  }, []);
 
   // Typewriter effect for agent terminal
   useEffect(() => {
@@ -165,13 +171,14 @@ export default function SandboxPage() {
   }, [evaluate, jsonError]);
 
   const fireRing = useCallback(() => {
+    if (ringIntervalRef.current) clearInterval(ringIntervalRef.current);
     setRingBuilding(true);
     setRingProgress(0);
     setResult(null);
     const base = Date.now();
     let i = 0;
     const interval = setInterval(() => {
-      if (i >= 5) { clearInterval(interval); setRingBuilding(false); return; }
+      if (i >= 5) { clearInterval(interval); ringIntervalRef.current = null; setRingBuilding(false); return; }
       const payload = {
         event_id: `sandbox_ringseq_${base}_${i}`,
         amount: 45000.0,
@@ -197,7 +204,7 @@ export default function SandboxPage() {
       });
       i++;
     }, 300);
-    return () => clearInterval(interval);
+    ringIntervalRef.current = interval;
   }, [evaluate]);
 
   const fireCustom = useCallback(() => {

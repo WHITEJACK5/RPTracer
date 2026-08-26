@@ -101,7 +101,7 @@ export type ModelReport = {
     fp_per_1000_legit: number;
     est_review_friction_inr_per_1k_txns: number;
   }>;
-  flag_rate_operating_points?: Record<string, any>;
+  flag_rate_operating_points?: Record<string, unknown>;
   auc_roc?: number;
   precision?: number;
   recall?: number;
