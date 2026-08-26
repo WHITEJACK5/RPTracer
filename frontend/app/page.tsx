@@ -112,22 +112,18 @@ const FEATURES = [
   },
 ];
 
-// Fetch model version for footer
-function useVersion() {
+export default function LandingPage() {
+  const [activeTab, setActiveTab] = useState("Normal UPI");
+  const [result, setResult] = useState<RiskEvaluation | null>(null);
   const [version, setVersion] = useState<string | null>(null);
+  const evaluate = useEvaluate();
+
   useEffect(() => {
-    fetch("http://127.0.0.1:8000/api/v1/model/report")
+    fetch(`${process.env.NEXT_PUBLIC_API_BASE ?? "http://127.0.0.1:8000"}/api/v1/model/report`)
       .then((r) => r.json())
       .then((d) => setVersion(d.model_version))
       .catch(() => null);
   }, []);
-  return version ?? "v1.0";
-}
-
-export default function LandingPage() {
-  const [activeTab, setActiveTab] = useState("Normal UPI");
-  const [result, setResult] = useState<RiskEvaluation | null>(null);
-  const evaluate = useEvaluate();
 
   const runCurl = () => {
     const preset = PRESETS.find((p) => p.name === activeTab);
@@ -295,7 +291,7 @@ export default function LandingPage() {
         <div className="mx-auto flex max-w-[1100px] items-center justify-between px-6 py-6">
           <div className="flex items-center gap-4">
             <span className="font-mono text-sm text-text-primary">
-              TRACER {useVersion()}
+              TRACER {version ?? "v1.0"}
             </span>
             <span className="text-text-muted">•</span>
             <span className="text-xs text-text-muted">MIT License</span>

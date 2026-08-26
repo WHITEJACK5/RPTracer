@@ -34,6 +34,23 @@
   --color-entity-customer: #2dd4bf;
   --color-entity-mule: var(--color-risk-high);
 
+  /* Alias tokens used by components */
+  --color-neon-green: var(--color-risk-low);
+  --color-gold-400: var(--color-risk-medium);
+  --color-gold-500: #d97706;
+  --color-danger: var(--color-risk-high);
+  --color-ok: var(--color-risk-low);
+  --color-warn: var(--color-risk-medium);
+
+  /* GraphCanvas entity node colors */
+  --data-device: var(--color-entity-device);
+  --data-vpa: var(--color-entity-vpa);
+  --data-card: var(--color-entity-card);
+  --data-ip: var(--color-entity-ip);
+  --data-email: var(--color-entity-email);
+  --data-customer: var(--color-entity-customer);
+  --data-mule: var(--color-entity-mule);
+
   --shadow-accent: 0 0 18px -4px rgba(59, 130, 246, 0.5);
   --radius-sm: 8px;
   --radius-md: 14px;
