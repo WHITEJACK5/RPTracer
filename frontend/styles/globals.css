@@ -4,43 +4,49 @@
 
 /* ============================================================================
    TRACER design tokens — light + .dark
+   Palette follows Material UI's default theme (mui.com): MUI primary blue,
+   MUI semantic colors for success/warning/error, MUI's grey/paper surfaces.
    Dark mode is primary. Every visual primitive is a CSS variable; components
-   MUST NOT hardcode hex. Accent / risk / entity tokens are identical in both
-   modes — only surface/text/border repaint.
+   MUST NOT hardcode hex.
    ========================================================================== */
 :root {
-  --color-bg-primary: #f7f8fa;
+  /* MUI light theme: background.default / background.paper */
+  --color-bg-primary: #f5f5f5;
   --color-bg-secondary: #ffffff;
-  --color-bg-tertiary: #eef1f5;
-  --color-surface: rgba(255, 255, 255, 0.8);
-  --color-border: rgba(15, 23, 42, 0.08);
-  --color-border-strong: rgba(15, 23, 42, 0.16);
-  --color-text-primary: #0f172a;
-  --color-text-secondary: #475569;
-  --color-text-muted: #94a3b8;
+  --color-bg-tertiary: #f0f1f3;
+  --color-surface: rgba(255, 255, 255, 0.9);
+  --color-border: rgba(0, 0, 0, 0.12);
+  --color-border-strong: rgba(0, 0, 0, 0.23);
+  /* MUI text.primary / text.secondary / text.disabled */
+  --color-text-primary: rgba(0, 0, 0, 0.87);
+  --color-text-secondary: rgba(0, 0, 0, 0.6);
+  --color-text-muted: rgba(0, 0, 0, 0.38);
 
-  --color-accent: #3b82f6;
-  --color-accent-hover: #2563eb;
+  /* MUI primary.main / primary.dark */
+  --color-accent: #1976d2;
+  --color-accent-hover: #1565c0;
 
-  --color-risk-low: #22c55e;
-  --color-risk-medium: #f59e0b;
-  --color-risk-high: #ef4444;
+  /* MUI success.main / warning.main / error.main */
+  --color-risk-low: #2e7d32;
+  --color-risk-medium: #ed6c02;
+  --color-risk-high: #d32f2f;
 
-  --color-entity-device: #64748b;
-  --color-entity-vpa: #38bdf8;
-  --color-entity-card: #a78bfa;
-  --color-entity-ip: #94a3b8;
-  --color-entity-email: #f472b6;
-  --color-entity-customer: #2dd4bf;
+  /* Entity graph colors — drawn from the rest of the MUI palette */
+  --color-entity-device: #757575;
+  --color-entity-vpa: #0288d1;
+  --color-entity-card: #9c27b0;
+  --color-entity-ip: #616161;
+  --color-entity-email: #d81b60;
+  --color-entity-customer: #00897b;
   --color-entity-mule: var(--color-risk-high);
 
   /* Alias tokens used by components */
-  --color-neon-green: var(--color-risk-low);
-  --color-gold-400: var(--color-risk-medium);
-  --color-gold-500: #d97706;
   --color-danger: var(--color-risk-high);
   --color-ok: var(--color-risk-low);
   --color-warn: var(--color-risk-medium);
+  --color-neon-green: var(--color-risk-low);
+  --color-gold-400: var(--color-risk-medium);
+  --color-gold-500: #ed6c02;
 
   /* GraphCanvas entity node colors */
   --data-device: var(--color-entity-device);
@@ -51,7 +57,7 @@
   --data-customer: var(--color-entity-customer);
   --data-mule: var(--color-entity-mule);
 
-  --shadow-accent: 0 0 18px -4px rgba(59, 130, 246, 0.5);
+  --shadow-accent: 0 0 18px -4px rgba(25, 118, 210, 0.5);
   --radius-sm: 8px;
   --radius-md: 14px;
   --radius-lg: 22px;
@@ -61,16 +67,37 @@
 }
 
 .dark {
-  --color-bg-primary: #0a0e14;
-  --color-bg-secondary: #0f141c;
-  --color-bg-tertiary: #161c26;
-  --color-surface: rgba(22, 28, 38, 0.7);
-  --color-border: rgba(255, 255, 255, 0.08);
-  --color-border-strong: rgba(255, 255, 255, 0.14);
-  --color-text-primary: #e8ecf2;
-  --color-text-secondary: #9aa5b5;
-  --color-text-muted: #5c6577;
+  /* MUI dark theme: background.default / background.paper */
+  --color-bg-primary: #121212;
+  --color-bg-secondary: #1e1e1e;
+  --color-bg-tertiary: #272727;
+  --color-surface: rgba(30, 30, 30, 0.75);
+  --color-border: rgba(255, 255, 255, 0.12);
+  --color-border-strong: rgba(255, 255, 255, 0.23);
+  /* MUI dark text.primary / text.secondary / text.disabled */
+  --color-text-primary: #ffffff;
+  --color-text-secondary: rgba(255, 255, 255, 0.7);
+  --color-text-muted: rgba(255, 255, 255, 0.5);
 
+  /* MUI dark-mode primary is lightened for contrast on dark surfaces */
+  --color-accent: #90caf9;
+  --color-accent-hover: #64b5f6;
+
+  --color-risk-low: #66bb6a;
+  --color-risk-medium: #ffa726;
+  --color-risk-high: #f44336;
+  --color-neon-green: var(--color-risk-low);
+  --color-gold-400: var(--color-risk-medium);
+  --color-gold-500: #ffa726;
+
+  --color-entity-device: #9e9e9e;
+  --color-entity-vpa: #4fc3f7;
+  --color-entity-card: #ce93d8;
+  --color-entity-ip: #bdbdbd;
+  --color-entity-email: #f06292;
+  --color-entity-customer: #4db6ac;
+
+  --shadow-accent: 0 0 18px -4px rgba(144, 202, 249, 0.5);
   color-scheme: dark;
 }
 
@@ -126,8 +153,7 @@
     background-image: linear-gradient(
       92deg,
       var(--color-accent) 0%,
-      var(--color-entity-vpa) 50%,
-      var(--color-risk-low) 100%
+      var(--color-entity-vpa) 100%
     );
     -webkit-background-clip: text;
     background-clip: text;
@@ -159,4 +185,106 @@
   .terminal-scroll::-webkit-scrollbar-track {
     background: transparent;
   }
+
+  /* -- Loader (concentric-ring loader, adapted from Uiverse.io) ---------- */
+  .tracer-loader-back,
+  .tracer-loader-front {
+    fill: none;
+    stroke-width: 6px;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    transform: rotate(-100deg);
+    transform-origin: center;
+  }
+  .tracer-loader-back {
+    stroke: var(--color-border-strong);
+  }
+  .tracer-loader-front {
+    stroke: var(--color-accent);
+  }
+  .tracer-loader-outer {
+    stroke-dasharray: 62.75 188.25;
+    animation: tracer-loader-outer-sweep 1.8s ease infinite 0.15s;
+  }
+  .tracer-loader-middle {
+    stroke-dasharray: 42.5 127.5;
+    animation: tracer-loader-middle-sweep 1.8s ease infinite 0.1s;
+  }
+  .tracer-loader-inner {
+    stroke-dasharray: 22 66;
+    animation: tracer-loader-inner-sweep 1.8s ease infinite 0.05s;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .tracer-loader-outer,
+    .tracer-loader-middle,
+    .tracer-loader-inner {
+      animation: none;
+      stroke-dashoffset: 0;
+    }
+  }
+
+  /* -- ThemeToggle (pill switch, adapted from Uiverse.io) ----------------- */
+  .tracer-toggle-track {
+    background: var(--color-bg-tertiary);
+  }
+  .tracer-toggle-peer:checked ~ .tracer-toggle-track {
+    background: var(--color-accent);
+  }
+  .tracer-toggle-knob {
+    background: var(--color-bg-secondary);
+    box-shadow: 0 0 0 1px var(--color-border);
+  }
+  .tracer-toggle-peer:checked ~ .tracer-toggle-knob {
+    transform: translateX(24px);
+  }
+  .tracer-toggle:hover .tracer-toggle-track {
+    filter: brightness(1.08);
+  }
+  .tracer-toggle-peer:focus-visible ~ .tracer-toggle-track {
+    box-shadow: 0 0 0 2px var(--color-accent);
+  }
+
+  /* -- LogPanel (retro console card, adapted from Uiverse.io) ------------- */
+  .tracer-log-panel {
+    background: var(--color-bg-secondary);
+  }
+  .tracer-log-titlebar {
+    background: var(--color-bg-tertiary);
+    border-bottom: 1px solid var(--color-border);
+  }
+  .tracer-log-gutter {
+    background: var(--color-bg-tertiary);
+    border-right: 1px solid var(--color-border);
+  }
+
+  /* -- EmailBadge (flip-hover tooltip card, adapted from Uiverse.io) ------ */
+  .tracer-email-badge:hover,
+  .tracer-email-badge:focus-visible {
+    border-color: var(--color-accent);
+    color: var(--color-accent);
+  }
+  .tracer-email-badge:hover .tracer-email-tip,
+  .tracer-email-badge:focus-visible .tracer-email-tip {
+    opacity: 1;
+    margin-bottom: 0.75rem;
+  }
+}
+
+@keyframes tracer-loader-outer-sweep {
+  0% { stroke-dashoffset: 25; }
+  25% { stroke-dashoffset: 0; }
+  65% { stroke-dashoffset: 301; }
+  80%, 100% { stroke-dashoffset: 276; }
+}
+@keyframes tracer-loader-middle-sweep {
+  0% { stroke-dashoffset: 17; }
+  25% { stroke-dashoffset: 0; }
+  65% { stroke-dashoffset: 204; }
+  80%, 100% { stroke-dashoffset: 187; }
+}
+@keyframes tracer-loader-inner-sweep {
+  0% { stroke-dashoffset: 9; }
+  25% { stroke-dashoffset: 0; }
+  65% { stroke-dashoffset: 106; }
+  80%, 100% { stroke-dashoffset: 97; }
 }

@@ -51,8 +51,6 @@ from backend.app.services.graph_detector import get_detector
 from backend.app.services.ledger_service import get_ledger
 from backend.app.services.scorer import run_pipeline
 
-_BOOT_T0 = time.time()
-
 
 def _problem(status: int, title: str, detail: str, instance: str = "/healthz",
              headers: dict[str, str] | None = None, **extra: Any) -> JSONResponse:
@@ -135,7 +133,7 @@ def create_app() -> FastAPI:
         return resp
 
     # --- Idempotency (exactly-once under webhook retries) -------------------
-    app.add_middleware(IdempotencyMiddleware)
+    app.add_middleware(IdempotencyMiddleware, ttl_seconds=settings.idempotency_ttl_seconds)
 
     # --- Routers ------------------------------------------------------------
     app.include_router(health_router.router)

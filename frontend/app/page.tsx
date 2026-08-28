@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useEvaluate } from "@/hooks/useApi";
+import EmailBadge from "@/components/ui/EmailBadge";
 import type { RiskEvaluation } from "@/lib/types";
 
 // Real curl examples that actually work against the backend
@@ -147,14 +148,6 @@ export default function LandingPage() {
           <Link href="/" className="font-mono text-lg font-bold text-text-primary">
             TRACER
           </Link>
-          <nav className="hidden items-center gap-6 md:flex">
-            <a href="https://github.com/WHITEJACK5/RPTracer" target="_blank" rel="noreferrer" className="text-sm text-text-secondary hover:text-accent">
-              GitHub
-            </a>
-            <a href="https://github.com/WHITEJACK5/RPTracer#readme" target="_blank" rel="noreferrer" className="text-sm text-text-secondary hover:text-accent">
-              Docs
-            </a>
-          </nav>
           <Link
             href="/dashboard"
             className="rounded-md bg-accent px-4 py-1.5 text-sm font-semibold text-white hover:bg-accent-hover"
@@ -287,7 +280,7 @@ export default function LandingPage() {
 
       {/* Footer */}
       <footer className="border-t border-border bg-bg-secondary">
-        <div className="mx-auto flex max-w-[1100px] items-center justify-between px-6 py-6">
+        <div className="mx-auto flex max-w-[1100px] flex-wrap items-center justify-between gap-4 px-6 py-6">
           <div className="flex items-center gap-4">
             <span className="font-mono text-sm text-text-primary">
               TRACER {version ?? "v1.0"}
@@ -295,7 +288,10 @@ export default function LandingPage() {
             <span className="text-text-muted">•</span>
             <span className="text-xs text-text-muted">MIT License</span>
           </div>
-          <span className="font-mono text-sm text-text-secondary">Razorpay AI Buildathon 2026</span>
+          <div className="flex items-center gap-4">
+            <span className="font-mono text-sm text-text-secondary">Razorpay AI Buildathon 2026</span>
+            <EmailBadge href="mailto:hello@example.com" label="Contact" />
+          </div>
         </div>
       </footer>
     </div>

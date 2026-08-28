@@ -3,22 +3,21 @@ import { render, screen } from "@testing-library/react";
 import Loader from "../Loader";
 
 describe("Loader", () => {
-  it("renders a status region", () => {
-    const { container } = render(<Loader />);
+  it("renders a status region with an accessible caption", () => {
+    render(<Loader />);
     const status = screen.getByRole("status");
     expect(status).toBeInTheDocument();
     expect(status).toHaveTextContent("Loading");
-    expect(container.querySelector(".sr-only")).not.toBeNull();
   });
 
   it("renders at sm / md / lg sizes", () => {
     const { rerender, container } = render(<Loader size="sm" />);
-    const sm = container.querySelector('[role="status"] span');
-    expect(sm).toHaveClass("h-5", "w-5");
+    const sm = container.querySelector('[role="status"] svg');
+    expect(sm).toHaveAttribute("width", "44");
 
     rerender(<Loader size="lg" />);
-    const lg = container.querySelector('[role="status"] span');
-    expect(lg).toHaveClass("h-12", "w-12");
+    const lg = container.querySelector('[role="status"] svg');
+    expect(lg).toHaveAttribute("width", "88");
   });
 
   it("renders an optional label", () => {

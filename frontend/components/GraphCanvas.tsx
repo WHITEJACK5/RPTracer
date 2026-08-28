@@ -105,24 +105,24 @@ export default function GraphCanvas({ center, refreshToken }: { center?: string 
             <span className="chip font-mono text-[10px]">{data.nodes.length} nodes</span>
             <span className="chip font-mono text-[10px]">{data.edges.length} edges</span>
             {muleCount > 0 && (
-              <span className="chip !border-danger/40 !bg-danger/10 font-mono text-[10px] text-danger">â¬¤ {muleCount} MULE NODES</span>
+              <span className="chip !border-danger/40 !bg-danger/10 font-mono text-[10px] text-danger">⬤ {muleCount} MULE NODES</span>
             )}
           </>
         )}
         <span className="flex-1" />
-        <span className="font-mono text-[10px] text-text-muted">NetworkX topology Â· radius 2 ego-graph</span>
+        <span className="font-mono text-[10px] text-text-muted">NetworkX topology · radius 2 ego-graph</span>
       </div>
 
       <div className="relative overflow-hidden rounded-md border border-border bg-bg-primary/40">
         {error ? (
           <div className="flex h-[420px] flex-col items-center justify-center gap-3">
-            <p className="font-mono text-xs text-danger">graph engine unreachable â€” {error}</p>
+            <p className="font-mono text-xs text-danger">graph engine unreachable — {error}</p>
             <button onClick={() => setRetryTick((t) => t + 1)} className="chip font-mono !text-[10px] hover:bg-bg-tertiary">RETRY</button>
           </div>
         ) : !data ? (
-          <div className="relative h-[420px]"><Loader center label="loading topologyâ€¦" /></div>
+          <div className="relative h-[420px]"><Loader center label="loading topology…" /></div>
         ) : !layout ? (
-          <div className="flex h-[420px] items-center justify-center font-mono text-xs text-text-muted">no linkable entities yet â€” run an event to populate the graph</div>
+          <div className="flex h-[420px] items-center justify-center font-mono text-xs text-text-muted">no linkable entities yet — run an event to populate the graph</div>
         ) : (
           <svg viewBox={`0 0 ${W} ${H}`} className="h-[420px] w-full">
             <defs>
@@ -152,7 +152,7 @@ export default function GraphCanvas({ center, refreshToken }: { center?: string 
               const showLabel = n.id === data.center || isMule || n.id === hover || (neighbors?.has(n.id) ?? false);
               return (
                 <g key={n.id} opacity={dim ? 0.22 : 1} onMouseEnter={() => setHover(n.id)} onMouseLeave={() => setHover(null)} style={{ cursor: "pointer" }}>
-                  <title>{`${n.type.toUpperCase()} Â· ${n.label}${isMule ? " Â· FLAGGED MULE" : ""}`}</title>
+                  <title>{`${n.type.toUpperCase()} · ${n.label}${isMule ? " · FLAGGED MULE" : ""}`}</title>
                   {isMule && <circle cx={p.x} cy={p.y} r={st.r + 7} fill="var(--color-danger)" fillOpacity={0.12} />}
                   <circle cx={p.x} cy={p.y} r={st.r}
                     fill={isMule ? "var(--data-mule)" : st.color}
@@ -163,7 +163,7 @@ export default function GraphCanvas({ center, refreshToken }: { center?: string 
                   {showLabel && (
                     <text x={p.x} y={p.y - st.r - 6} textAnchor="middle" fontSize="9.5"
                       fill={isMule ? "var(--data-mule)" : "var(--color-text-secondary)"} fontFamily="var(--font-mono)">
-                      {n.label.length > 18 ? n.label.slice(0, 17) + "â€¦" : n.label}{isMule ? " â˜ " : ""}
+                      {n.label.length > 18 ? n.label.slice(0, 17) + "…" : n.label}{isMule ? " ☠" : ""}
                     </text>
                   )}
                 </g>

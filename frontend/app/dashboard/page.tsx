@@ -16,6 +16,7 @@ import { useLedgerStats, useModelReport } from "@/hooks/useApi";
 import { useLiveFeed } from "@/hooks/useLiveFeed";
 import Loader from "@/components/ui/Loader";
 import StreamingText from "@/components/ui/StreamingText";
+import LogPanel from "@/components/ui/LogPanel";
 import { cn } from "@/lib/utils";
 
 function Kpi({ label, value, tone }: { label: string; value: string; tone?: string }) {
@@ -27,7 +28,7 @@ function Kpi({ label, value, tone }: { label: string; value: string; tone?: stri
   );
 }
 
-const PIE_COLORS = ["var(--color-neon-green)", "var(--color-gold-500)", "var(--color-danger)", "var(--color-text-muted)"];
+const PIE_COLORS = ["var(--color-risk-low)", "var(--color-entity-vpa)", "var(--color-danger)", "var(--color-text-muted)"];
 
 export default function DashboardOverview() {
   const { data: model, isLoading: mLoading } = useModelReport();
@@ -77,9 +78,9 @@ export default function DashboardOverview() {
       ) : (
         <>
           <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
-            <Kpi label="Model AUPRC" value={model ? auprc.toFixed(3) : "â€”"} tone="text-risk-low" />
-            <Kpi label="Ledger Entries" value={ledger ? String(totalEntries) : "â€”"} />
-            <Kpi label="Chain Head" value={ledger?.chain_head ? `${ledger.chain_head.slice(0, 10)}â€¦` : "â€”"} tone="text-accent" />
+            <Kpi label="Model AUPRC" value={model ? auprc.toFixed(3) : "—"} tone="text-risk-low" />
+            <Kpi label="Ledger Entries" value={ledger ? String(totalEntries) : "—"} />
+            <Kpi label="Chain Head" value={ledger?.chain_head ? `${ledger.chain_head.slice(0, 10)}…` : "—"} tone="text-accent" />
             <Kpi label="Integrity" value={chainVerified ? "OK (VERIFIED)" : "CHECK"} tone={chainVerified ? "text-risk-low" : "text-warn"} />
           </div>
 
@@ -97,10 +98,12 @@ export default function DashboardOverview() {
                       borderRadius: 8,
                       color: "var(--color-text-primary)",
                     }}
+                    labelStyle={{ color: "var(--color-text-primary)" }}
+                    itemStyle={{ color: "var(--color-text-primary)" }}
                   />
                   <Bar dataKey="v" radius={[6, 6, 0, 0]}>
                     {modelMetrics.map((_, i) => (
-                      <Cell key={i} fill={i % 2 === 0 ? "var(--color-neon-green)" : "var(--color-gold-500)"} />
+                      <Cell key={i} fill={i % 2 === 0 ? "var(--color-accent)" : "var(--color-entity-vpa)"} />
                     ))}
                   </Bar>
                 </BarChart>
@@ -123,6 +126,9 @@ export default function DashboardOverview() {
                       borderRadius: 8,
                       color: "var(--color-text-primary)",
                     }}
+                    labelStyle={{ color: "var(--color-text-primary)" }}
+                    itemStyle={{ color: "var(--color-text-primary)" }}
+                    formatter={(value: number, name: string) => [value.toLocaleString(), name]}
                   />
                 </PieChart>
               </ResponsiveContainer>
@@ -131,19 +137,16 @@ export default function DashboardOverview() {
         </>
       )}
 
-      <div className="glass p-5">
-        <div className="mb-3 flex items-center gap-2 font-sans text-sm font-semibold tracking-widest text-text-muted">
-          LIVE ALERT STREAM
-        </div>
+      <LogPanel title="live_alert_stream.log" lineCount={7}>
         {latest ? (
           <StreamingText
             key={latest.id}
-            text={`[${new Date(latest.ts).toLocaleTimeString()}] ${latest.title} â€” ${latest.detail}`}
+            text={`[${new Date(latest.ts).toLocaleTimeString()}] ${latest.title} — ${latest.detail}`}
             speed={10}
             ariaLabel={latest.title}
           />
         ) : (
-          <p className="font-mono text-xs text-text-muted">awaiting alertsâ€¦</p>
+          <p className="font-mono text-xs text-text-muted">awaiting alerts…</p>
         )}
 
         <ul className="mt-4 space-y-1.5">
@@ -167,7 +170,7 @@ export default function DashboardOverview() {
             </motion.li>
           ))}
         </ul>
-      </div>
+      </LogPanel>
     </div>
   );
 }

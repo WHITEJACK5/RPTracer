@@ -7,7 +7,7 @@ import Button from "./Button";
 
 /**
  * Glassmorphism form surface: a blurred, gold-bordered card with a soft gold
- * drop shadow. Renders an optional `title`, `children` (the fields â€” typically
+ * drop shadow. Renders an optional `title`, `children` (the fields — typically
  * Input / Textarea) and a submit Button with `submitLabel`. The
  * form is wrapped in a single onSubmit handler that prevents default reload.
  */
@@ -53,7 +53,7 @@ export default function GlassForm({
       <div className="flex flex-col gap-4">{children}</div>
       <div className="flex items-center gap-3 pt-1">
         <Button type="submit" disabled={submitting}>
-          {submitting ? "Workingâ€¦" : submitLabel}
+          {submitting ? "Working…" : submitLabel}
         </Button>
         {footer}
       </div>

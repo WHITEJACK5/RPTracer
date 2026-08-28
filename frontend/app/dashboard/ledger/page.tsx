@@ -7,17 +7,17 @@ import TextReveal from "@/components/ui/TextReveal";
 import type { LedgerEntry, LedgerStat } from "@/lib/types";
 
 function buildReport(stats: LedgerStat | undefined, rows: LedgerEntry[]): string {
-  if (!stats) return "Ledger unavailable â€” engine offline.";
+  if (!stats) return "Ledger unavailable — engine offline.";
   const verified = stats.chain_verified ?? stats.integrity_ok ?? true;
   const entries = stats.entries ?? stats.total_entries ?? 0;
   const head = stats.chain_head ?? stats.last_hash ?? "GENESIS";
   const safeRows = Array.isArray(rows) ? rows : [];
-  const recent = safeRows.slice(0, 4).map((r) => `- \`${r.event_id}\` ${r.action} (${r.direction}) â‚¹${r.amount}`).join("\n");
-  return `**Hash-chained audit ledger** â€” integrity ${verified ? "VERIFIED âœ“" : "BROKEN âœ—"}
+  const recent = safeRows.slice(0, 4).map((r) => `- \`${r.event_id}\` ${r.action} (${r.direction}) ₹${r.amount}`).join("\n");
+  return `**Hash-chained audit ledger** — integrity ${verified ? "VERIFIED ✓" : "BROKEN ✗"}
 
 - Total entries: **${entries}**
 - Ledger file: \`${stats.path ?? "ledger.jsonl"}\`
-- Chain head: \`${head.slice(0, 16)}â€¦\`
+- Chain head: \`${head.slice(0, 16)}…\`
 
 Recent writes:
 ${recent || "- No recent entries recorded"}`;
@@ -63,7 +63,7 @@ export default function LedgerPage() {
                     <td className="px-3 py-2.5 font-mono text-[12px] text-text-secondary">{r.event_id}</td>
                     <td className="px-3 py-2.5 text-text-primary">{r.action}</td>
                     <td className="px-3 py-2.5 text-text-secondary">{r.actor}</td>
-                    <td className="px-3 py-2.5 font-mono text-[11px] text-risk-low/80">{r.hash.slice(0, 12)}â€¦</td>
+                    <td className="px-3 py-2.5 font-mono text-[11px] text-risk-low/80">{r.hash.slice(0, 12)}…</td>
                   </tr>
                 ))}
               </tbody>

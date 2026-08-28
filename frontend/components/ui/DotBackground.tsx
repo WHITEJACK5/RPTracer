@@ -5,11 +5,20 @@ import { useReducedMotion } from "framer-motion";
 
 /**
  * Ambient dot-field background. Renders a 40px grid of 4px dots on a <canvas>;
- * dots within 200px of the cursor brighten and shift luminance from gold-400
- * toward neon-green, with stronger glow in dark mode. Animation runs on a
+ * dots within 200px of the cursor brighten and shift luminance from the
+ * accent color toward the vpa entity color (both read live from CSS custom
+ * properties, so light/dark and any future palette change are picked up
+ * automatically), with stronger glow in dark mode. Animation runs on a
  * throttled requestAnimationFrame loop and pauses entirely under
  * `prefers-reduced-motion` (a single static grid is drawn).
  */
+function hexToRgb(hex: string): [number, number, number] {
+  const clean = hex.trim().replace("#", "");
+  const full = clean.length === 3 ? clean.split("").map((c) => c + c).join("") : clean;
+  const num = parseInt(full, 16);
+  return [(num >> 16) & 255, (num >> 8) & 255, num & 255];
+}
+
 export default function DotBackground({ className }: { className?: string }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const reduced = useReducedMotion();
@@ -27,6 +36,16 @@ export default function DotBackground({ className }: { className?: string }) {
     let dpr = Math.min(window.devicePixelRatio || 1, 2);
     const mouse = { x: -9999, y: -9999 };
     let needsDraw = true;
+    let from: [number, number, number] = [25, 118, 210];
+    let to: [number, number, number] = [2, 136, 209];
+
+    function readPalette() {
+      const styles = getComputedStyle(document.documentElement);
+      const accent = styles.getPropertyValue("--color-accent").trim();
+      const vpa = styles.getPropertyValue("--color-entity-vpa").trim();
+      if (accent) from = hexToRgb(accent);
+      if (vpa) to = hexToRgb(vpa);
+    }
 
     function resize() {
       dpr = Math.min(window.devicePixelRatio || 1, 2);
@@ -41,15 +60,15 @@ export default function DotBackground({ className }: { className?: string }) {
       const dist = Math.hypot(dx, dy);
       const t = Math.max(0, 1 - dist / RADIUS); // 1 near cursor → 0 far
       const alpha = 0.12 + t * (dark ? 0.85 : 0.6);
-      // interpolate gold (245,196,81) → neon-green (54,240,138)
-      const r = Math.round(245 + (54 - 245) * t);
-      const g = Math.round(196 + (240 - 196) * t);
-      const b = Math.round(81 + (138 - 81) * t);
+      const r = Math.round(from[0] + (to[0] - from[0]) * t);
+      const g = Math.round(from[1] + (to[1] - from[1]) * t);
+      const b = Math.round(from[2] + (to[2] - from[2]) * t);
       const glow = t * (dark ? 14 : 8);
       return { rgb: `${r},${g},${b}`, alpha, glow };
     }
 
     function draw() {
+      readPalette();
       const dark = document.documentElement.classList.contains("dark");
       ctx!.clearRect(0, 0, canvas!.width, canvas!.height);
       const w = canvas!.width;

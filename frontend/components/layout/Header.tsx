@@ -3,9 +3,11 @@
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Menu, X } from "lucide-react";
+import { X } from "lucide-react";
 import { NAV } from "@/components/layout/Sidebar";
 import ThemeToggle from "./ThemeToggle";
+import MenuButton from "@/components/ui/MenuButton";
+import AccountMenu from "@/components/ui/AccountMenu";
 import { cn } from "@/lib/utils";
 
 /** Top app bar: brand, optional nav links, theme toggle, and mobile hamburger. */
@@ -80,16 +82,13 @@ export default function Header({
           )}
 
           <div className="flex-1" />
-          <ThemeToggle />
+          <div className="flex items-center gap-2">
+            <ThemeToggle />
+            <AccountMenu />
+          </div>
 
           {/* Hamburger — visible below md */}
-          <button
-            className="flex items-center justify-center rounded-md p-2 text-text-secondary hover:bg-bg-tertiary md:hidden"
-            onClick={() => setDrawerOpen(!drawerOpen)}
-            aria-label={drawerOpen ? "Close menu" : "Open menu"}
-          >
-            {drawerOpen ? <X size={20} /> : <Menu size={20} />}
-          </button>
+          <MenuButton open={drawerOpen} onClick={() => setDrawerOpen(!drawerOpen)} />
         </div>
       </header>
 

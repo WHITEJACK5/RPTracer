@@ -85,7 +85,7 @@ export default function StreamingText({
         shown
       )}
       {!reduced && !cursorFaded && (
-        <span className="ml-0.5 inline-block animate-blink text-risk-low">â–Š</span>
+        <span className="ml-0.5 inline-block animate-blink text-risk-low">▊</span>
       )}
     </div>
   );

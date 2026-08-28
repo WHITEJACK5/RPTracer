@@ -1,38 +1,33 @@
 ﻿"use client";
 
-import { AnimatePresence, motion } from "framer-motion";
-import { Moon, Sun } from "lucide-react";
 import { useTheme } from "next-themes";
 import { useEffect, useState } from "react";
-import { cn } from "@/lib/utils";
 
-/** Animated sun (gold) â†” moon (neon-green) theme switch via next-themes. */
+/**
+ * Pill toggle switch (adapted from a Uiverse.io CSS toggle, recolored onto
+ * the design tokens — see `.tracer-toggle-*` in globals.css) that flips
+ * between light and dark via next-themes. The knob position and track color
+ * both derive from the checkbox's `:checked` state via sibling selectors.
+ */
 export default function ThemeToggle() {
   const { resolvedTheme, setTheme } = useTheme();
   const [mounted, setMounted] = useState(false);
   useEffect(() => setMounted(true), []);
-  const isDark = resolvedTheme === "dark";
+  const isDark = mounted ? resolvedTheme === "dark" : true;
 
   return (
-    <button
+    <label
+      className="tracer-toggle relative inline-flex h-8 w-14 cursor-pointer items-center rounded-full border border-border transition-colors"
       aria-label="Toggle color theme"
-      onClick={() => setTheme(isDark ? "light" : "dark")}
-      className="grid h-9 w-9 place-items-center rounded-md border border-border bg-surface text-text-secondary transition-colors hover:border-accent hover:text-accent"
     >
-      <AnimatePresence mode="wait" initial={false}>
-        {mounted && (
-          <motion.span
-            key={isDark ? "moon" : "sun"}
-            initial={{ rotate: -90, opacity: 0 }}
-            animate={{ rotate: 0, opacity: 1 }}
-            exit={{ rotate: 90, opacity: 0 }}
-            transition={{ duration: 0.2 }}
-            className={cn(isDark ? "text-risk-low" : "text-accent")}
-          >
-            {isDark ? <Moon size={17} /> : <Sun size={17} />}
-          </motion.span>
-        )}
-      </AnimatePresence>
-    </button>
+      <input
+        type="checkbox"
+        className="tracer-toggle-peer sr-only"
+        checked={isDark}
+        onChange={() => setTheme(isDark ? "light" : "dark")}
+      />
+      <span className="tracer-toggle-track absolute inset-0 rounded-full transition-colors" />
+      <span className="tracer-toggle-knob relative z-10 ml-1 h-6 w-6 rounded-full shadow transition-transform" />
+    </label>
   );
 }

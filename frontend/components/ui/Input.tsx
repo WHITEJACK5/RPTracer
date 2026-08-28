@@ -89,5 +89,40 @@ const Textarea = forwardRef<
 ));
 Textarea.displayName = "Textarea";
 
-export { Input, Textarea };
+/**
+ * Underline-style input with a floating label (adapted from a Uiverse.io
+ * input, recolored onto the design tokens). The label sits inline as
+ * placeholder text until focused or filled, then floats above the line —
+ * a lighter-weight look than the boxed `Input` for dense filter bars.
+ */
+const FloatingInput = forwardRef<HTMLInputElement, InputProps>(
+  ({ label, className, id, ...rest }, ref) => {
+    const inputId = id ?? `floating-${label?.replace(/\s+/g, "-").toLowerCase() ?? "input"}`;
+    return (
+      <div className="relative">
+        <input
+          ref={ref}
+          id={inputId}
+          placeholder=" "
+          className={cn(
+            "peer w-full border-b border-border bg-transparent px-0.5 py-2 text-sm text-text-primary outline-none transition-colors focus:border-b-2 focus:border-accent",
+            className
+          )}
+          {...rest}
+        />
+        {label && (
+          <label
+            htmlFor={inputId}
+            className="pointer-events-none absolute left-0.5 top-2 text-sm text-text-muted transition-all peer-focus:-top-3.5 peer-focus:text-xs peer-focus:text-accent peer-[:not(:placeholder-shown)]:-top-3.5 peer-[:not(:placeholder-shown)]:text-xs"
+          >
+            {label}
+          </label>
+        )}
+      </div>
+    );
+  }
+);
+FloatingInput.displayName = "FloatingInput";
+
+export { Input, Textarea, FloatingInput };
 export default Input;

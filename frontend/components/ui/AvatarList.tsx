@@ -44,27 +44,27 @@ export default function AvatarList({
         <motion.div
           key={a.id}
           className="relative"
-          style={{ marginLeft: i === 0 ? 0 : -10, zIndex: shown.length - i }}
+          style={{ marginLeft: i === 0 ? 0 : -8, zIndex: shown.length - i }}
           whileHover={reduced ? undefined : { scale: 1.15, zIndex: 50 }}
           onMouseEnter={() => setActive(a.id)}
           onMouseLeave={() => setActive(null)}
         >
           <div
-            className="grid h-9 w-9 place-items-center rounded-full text-[11px] font-bold text-bg-primary"
+            className="grid h-7 w-7 place-items-center rounded-full text-[10px] font-bold text-bg-primary"
             style={{
-              background: "linear-gradient(135deg, var(--color-gold-400), var(--color-neon-green))",
-              boxShadow: "0 0 0 2px var(--color-bg-primary)",
+              background: "linear-gradient(135deg, var(--color-accent), var(--color-entity-vpa))",
+              boxShadow: "0 0 0 2px var(--color-bg-secondary)",
             }}
           >
             {initials(a.name)}
           </div>
           <span
-            className="absolute -bottom-0.5 -right-0.5 h-2.5 w-2.5 rounded-full border-2 border-bg-primary"
+            className="absolute -bottom-0.5 -right-0.5 h-2 w-2 rounded-full border-2 border-bg-secondary"
             style={{ background: STATUS_COLOR[a.status] }}
           />
           {active === a.id && (
             <div
-              className="glass absolute left-1/2 top-11 z-50 -translate-x-1/2 whitespace-nowrap px-3 py-1.5 text-center"
+              className="glass absolute bottom-full left-1/2 z-50 mb-2 -translate-x-1/2 whitespace-nowrap px-3 py-1.5 text-center"
               role="tooltip"
             >
               <p className="text-[11px] font-semibold text-text-primary">{a.name}</p>
@@ -75,8 +75,8 @@ export default function AvatarList({
       ))}
       {overflow > 0 && (
         <div
-          className="ml-[-10px] grid h-9 w-9 place-items-center rounded-full text-[10px] font-bold text-text-secondary"
-          style={{ background: "var(--color-bg-tertiary)", boxShadow: "0 0 0 2px var(--color-bg-primary)" }}
+          className="ml-[-8px] grid h-7 w-7 place-items-center rounded-full text-[10px] font-bold text-text-secondary"
+          style={{ background: "var(--color-bg-tertiary)", boxShadow: "0 0 0 2px var(--color-bg-secondary)" }}
         >
           +{overflow}
         </div>

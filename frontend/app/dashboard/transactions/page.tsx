@@ -2,7 +2,7 @@
 
 import { useMemo, useState, type FormEvent } from "react";
 import { useLedger } from "@/hooks/useApi";
-import { Input } from "@/components/ui/Input";
+import { Input, FloatingInput } from "@/components/ui/Input";
 import Loader from "@/components/ui/Loader";
 import GlassForm from "@/components/ui/GlassForm";
 import TextReveal from "@/components/ui/TextReveal";
@@ -41,9 +41,8 @@ export default function TransactionsPage() {
 
       <div className="grid gap-6 lg:grid-cols-[320px_minmax(0,1fr)]">
         <div className="flex flex-col gap-4">
-          <Input
+          <FloatingInput
             label="Search"
-            placeholder="event id, action, actorâ€¦"
             value={filters.q}
             onChange={(e) => setFilters((f) => ({ ...f, q: e.target.value }))}
           />
@@ -91,7 +90,7 @@ export default function TransactionsPage() {
                       <td className="px-3 py-2.5">
                         <span className={r.direction === "CREDIT" ? "text-risk-low" : "text-accent"}>{r.direction}</span>
                       </td>
-                      <td className="px-3 py-2.5 text-right font-mono text-[12px] text-text-primary">â‚¹{r.amount.toLocaleString()}</td>
+                      <td className="px-3 py-2.5 text-right font-mono text-[12px] text-text-primary">₹{r.amount.toLocaleString()}</td>
                     </tr>
                   ))}
                 </tbody>

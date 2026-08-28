@@ -44,14 +44,11 @@ export default function Sidebar() {
         })}
       </nav>
 
-      <div className="mt-auto">
-        <div className="mb-3 flex items-center gap-2 font-mono text-[10px] uppercase tracking-wider text-text-muted">
-          <ShieldAlert size={13} className="text-risk-low" /> Active Analysts
+      <div className="mt-auto rounded-[var(--radius-md)] border border-border bg-bg-tertiary/60 p-3">
+        <div className="mb-2.5 flex items-center gap-2 font-mono text-[10px] uppercase tracking-wider text-text-muted">
+          <ShieldAlert size={13} className="text-risk-low shrink-0" /> Active Analysts
         </div>
-        <AvatarList
-          analysts={analysts ?? []}
-          className="flex-wrap"
-        />
+        <AvatarList analysts={analysts ?? []} max={4} />
       </div>
     </aside>
   );

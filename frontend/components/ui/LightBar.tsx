@@ -5,7 +5,7 @@ import { cn } from "@/lib/utils";
 
 /**
  * Fixed 3px accent bar pinned to the top of the viewport. A gradient sweep
- * (transparent â†’ gold-400 â†’ neon-green â†’ transparent) travels leftâ†’right every
+ * (transparent → accent → entity-vpa → transparent) travels left→right every
  * 3s and emits a neon glow in dark mode. Honors `prefers-reduced-motion`.
  */
 export default function LightBar({ className }: { className?: string }) {
@@ -21,13 +21,13 @@ export default function LightBar({ className }: { className?: string }) {
       )}
     >
       {reduced ? (
-        <div className="h-full w-full bg-gradient-to-r from-transparent via-gold-400 to-neon-green opacity-70" />
+        <div className="h-full w-full bg-gradient-to-r from-transparent via-accent to-entity-vpa opacity-70" />
       ) : (
         <motion.div
           className="h-full w-full"
           style={{
             background:
-              "linear-gradient(90deg, transparent 0%, var(--color-gold-400) 45%, var(--color-neon-green) 55%, transparent 100%)",
+              "linear-gradient(90deg, transparent 0%, var(--color-accent) 45%, var(--color-entity-vpa) 55%, transparent 100%)",
             boxShadow: "0 0 12px 1px var(--shadow-accent)",
           }}
           initial={{ x: "-100%" }}
