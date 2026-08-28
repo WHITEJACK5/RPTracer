@@ -1,8 +1,8 @@
-﻿{
+{
     "name":  "rptracer",
     "version":  "1.0.0",
     "private":  true,
-    "description":  "TRACER v1.0 â€” Razorpay AI Buildathon 2026 Track 2 Â· High-Frequency AI Risk Engine dashboard",
+    "description":  "TRACER v1.0 — Razorpay AI Buildathon 2026 Track 2 · High-Frequency AI Risk Engine dashboard",
     "scripts":  {
                     "dev":  "next dev -p 3000 -H 0.0.0.0",
                     "build":  "next build",
