@@ -134,6 +134,9 @@ export default function DashboardOverview() {
               </ResponsiveContainer>
             </div>
           </div>
+          <div className="rounded-md border border-risk-high/30 bg-risk-high/10 p-3 font-mono text-[11px] leading-relaxed text-text-secondary">
+            <span className="font-bold text-risk-high">GBDT disclosure:</span> At any calibrated confidence threshold (p≥0.50 / 0.70 / 0.90) this model&apos;s standalone recall is 0% on our synthetic benchmark (P=0.000 R=0.000) — it is used only for SHAP explanation surfacing and policy-floor inputs, not as a standalone detector. Ring detection on graph topology is the headline claim.
+          </div>
         </>
       )}
 

@@ -63,8 +63,8 @@ backend/                       (canonical package now lives under backend/app/)
                                 honesty + enforcement, ledger stats
     test_risk_engine.py         bands, presets, SHAP bounds, tamper evidence,
                                 prompt-injection neutralization
-    test_graph_generalization.py novel-ring recovery via public API +
-                                benign fan-out negative control
+     test_graph_live_api.py deterministic rule firing via live API (not ML
+                                 generalization) + benign fan-out negative control
 data/
   schema.py                     neutral feature-name contract
   ground_truth.py               INDEPENDENT label process (no model imports):

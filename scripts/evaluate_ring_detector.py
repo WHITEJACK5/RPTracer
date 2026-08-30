@@ -1,18 +1,23 @@
 #!/usr/bin/env python3
-"""Decoupled Ring-Detector Evaluation & Evasion Cost Simulation.
+"""Threshold-Boundary Ring-Detector Evaluation — Self-Consistency Check.
 
-Evaluates the MuleDetector (production code path) on an actor-level simulation
-where labels are generated independently of the detector's own decision rules.
+Evaluates the MuleDetector (production code path) on an actor-level simulation.
+NOT an independent evaluation: labels are assigned by sampling fan-out from
+overlapping ranges (ring K=2-12 vs benign K=1-5), the same signal the detector's
+own rule (fan_out >= 4) fires on. Numbers demonstrate self-consistency on a
+boundary-straddling population, not generalization to separately-labeled fraud.
 
 Key design principles:
-  - Labels come from simulated ACTORS (ring operators vs benign users), not from
-    feature ranges aligned to the detector's threshold.
+  - Labels come from simulated ACTORS sampled by fan-out (ring operators vs
+    benign users sharing the detector's own signal), not from an independent
+    fraud dataset.
   - Predictions come from MuleDetector.observe(), fed one TransactionEvent at a
     time through the real production graph-building code path.
   - The actor population intentionally OVERLAPS at the decision boundary: some
     small rings (K=2-3 fan-out) and some larger benign fan-outs (K=4-5) ensure
     a perfect score is impossible by construction.
-  - Adversarial evasion uses a STRATEGY SEARCH, not a single hand-tuned case.
+  - Known-threshold sensitivity sweep (not adversarial discovery): tests a sweep
+    of the already-known constant fan_out >= 4, ordered cheapest-to-hardest.
 
 Output: EVASION_COST.md (auto-generated from script output).
 """
@@ -35,7 +40,7 @@ from backend.app.services.graph_detector import MuleDetector
 
 
 # ---------------------------------------------------------------------------
-# 1. Actor-level simulation — independent label source
+# 1. Actor-level simulation — threshold-boundary population (shares fan-out signal)
 # ---------------------------------------------------------------------------
 
 # Ring operators: one device controlling K payment identities.
@@ -352,8 +357,8 @@ def run_evasion_strategy_search(
 
 def main():
     print("=" * 60)
-    print("DECOUPLED Ring-Detector Evaluation")
-    print("Labels: actor simulation | Predictions: MuleDetector.observe()")
+    print("Threshold-Boundary Ring-Detector Evaluation (Self-Consistency Check)")
+    print("Labels: threshold-boundary population (shares fan-out signal) | Predictions: MuleDetector.observe()")
     print("=" * 60)
 
     # --- Part A: Actor-level evaluation ---
@@ -375,8 +380,8 @@ def main():
         if ci["p_lo"] >= 0.999 and ci["p_hi"] <= 1.001:
             print("  WARNING: Precision CI ≈ [1,1] — evaluation may still be circular!")
 
-    # --- Part B: Strategy search ---
-    print("\n--- Adversarial Evasion Strategy Search (n=200 adversaries) ---")
+    # --- Part B: Known-threshold sensitivity sweep (sweep of known fan_out >=4) ---
+    print("\n--- Known-Threshold Sensitivity Sweep (n=200 adversaries) ---")
     evasion = run_evasion_strategy_search(n_adversaries=200, seed=99)
     cheapest_total = sum(e["cheapest_wins"] for e in evasion)
     for e in evasion:
@@ -399,17 +404,20 @@ def main():
     cheapest_wins_sorted = sorted(evasion, key=lambda e: e["cheapest_wins"], reverse=True)
     winning_strategy = cheapest_wins_sorted[0]
 
-    md = f"""# EVASION_COST.md — Decoupled Ring-Detector Evaluation
+    md = f"""# EVASION_COST.md — Threshold-Boundary Ring-Detector Evaluation (Self-Consistency Check)
 
 This document reports precision, recall, F1, 95% bootstrap confidence intervals, and
-adversarial evasion cost simulation for TRACER v2.0's ring detector.
+known-threshold sensitivity sweep for TRACER v2.0's ring detector.
 
-**Evaluation design**: Labels come from an independent actor-level simulation (ring
-operators vs benign users with overlapping fan-out ranges). Predictions come from the
-production `MuleDetector.observe()` code path, fed one `TransactionEvent` at a time.
-The actor population intentionally overlaps at the decision boundary: small rings
-(fan-out 2-3) and larger benign fan-outs (3-5) make a perfect score impossible by
-construction.
+**Evaluation design — threshold-boundary test (self-consistency check, NOT independent)**:
+Labels are assigned by sampling fan-out from overlapping ranges (ring operators
+K=2-12 vs benign K=1-5 sharing the same structural signal the detector thresholds
+on). Predictions come from the production `MuleDetector.observe()` code path, fed
+one `TransactionEvent` at a time. The population overlaps at the boundary (small
+rings 2-3 vs benign 3-5) so a perfect score is impossible — but labels and
+predictions share the fan-out signal (`fan_out >= 4`), so the 0.646/0.880 numbers
+show self-consistency on a boundary-straddling population, not independent hold-out
+generalization.
 
 ---
 
@@ -431,10 +439,11 @@ production `MuleDetector.observe()` pipeline.
 
 ---
 
-## 2. Adversarial Evasion Strategy Search (n=200 adversaries)
+## 2. Known-Threshold Sensitivity Sweep (n=200 adversaries)
 
-Each adversary attempts multiple evasion strategies, ordered cheapest-to-hardest.
-We report which strategy is the *cheapest that actually evades* per adversary.
+This tests a sweep of the already-known constant (`fan_out >= 4`), with
+variants ordered cheapest-to-hardest. We report which variant is the *cheapest
+that actually stays below threshold* per adversary.
 
 | Strategy | Description | Detection Rate | Evasion Rate | Cheapest Wins |
 |---|---|---|---|---|
@@ -443,20 +452,28 @@ We report which strategy is the *cheapest that actually evades* per adversary.
         md += f"| {e['name']} | {e['desc']} | {e['detected_rate']:.1%} | {e['evaded_rate']:.1%} | {e['cheapest_wins']}/{cheapest_total} |\n"
 
     md += f"""
-**Most common cheapest evasion strategy**: {winning_strategy['name']}
+**Most common cheapest variant that stays below threshold**: {winning_strategy['name']}
 ({winning_strategy['desc']})
 
 ---
 
 ## 3. Interpretation
 
+- **Why this is NOT independent (read before quoting {ci['p_mean']:.3f}/{ci['r_mean']:.3f}):**
+  Labels are assigned by the same fan-out ranges the detector thresholds on
+  (`fan_out >= 4`); predictions also derive from fan-out counted from the live
+  graph. Because labels and predictions share this signal, the table above is a
+  **threshold-boundary self-consistency check** — it shows how the rule behaves
+  when the test population straddles its own boundary — not an independent
+  hold-out. Do not quote {ci['p_mean']:.3f}/{ci['r_mean']:.3f} as generalization.
+
 - **Why not 1.000?** The actor population includes rings with fan-out 2-3 (below the
   detector's hard `fan_out >= 4` rule) and benign users with fan-out 3-5 (above the
   rule). This overlap means the detector cannot perfectly separate the two classes,
-  and any reported metric is meaningful because it reflects real detection tradeoffs.
-- **Evasion cost**: The cheapest strategy that evades is `{winning_strategy['name']}`
-  — attackers must spend infrastructure (unique devices, unique cards, unique IPs) to
-  stay below multi-signal correlation boundaries.
+  and any reported metric reflects tradeoffs *within this shared-signal,
+  boundary-overlap population*.
+- **Sweep result (cheapest variant that stays below threshold)**: `{winning_strategy['name']}`
+  — operators must keep fan-out at 2 to stay below the known `fan_out >= 4` rule.
 - **CI width**: Wide confidence intervals reflect genuine variance across bootstrap
   resamples of the actor population, not a circular evaluation artifact.
 """

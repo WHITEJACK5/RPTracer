@@ -1,9 +1,10 @@
-"""Graph-detector generalization tests.
+"""Graph-detector live-API rule-firing tests (not ML generalization).
 
-The seeded demo history plants a fixture mule ring; these tests prove the
-detector catches rings built LIVE through the public API on identifiers that
-were never seeded, and that benign fan-out does NOT trigger it
-(false-positive-on-graph-structure control).
+The detector is a deterministic rule (fan_out >= 4), not a learned model.
+These tests prove the rule fires correctly end-to-end through the public API
+on identifiers that were never seeded, and that benign fan-out does NOT trigger
+it (false-positive-on-graph-structure control). This is live-API wiring
+verification, not a claim of ML generalization.
 """
 from __future__ import annotations
 
@@ -27,8 +28,8 @@ def _payload(device_id: str, vpa: str, amount: float = 1499.0,
     }
 
 
-def test_mule_ring_detected_for_novel_device_never_seeded(client: TestClient):
-    """A ring assembled purely through sequential API calls must be caught."""
+def test_mule_ring_rule_fires_via_live_api(client: TestClient):
+    """Deterministic rule fires correctly end-to-end via live API (not unit isolation)."""
     device = f"DEV-NOVEL-{uuid.uuid4().hex[:8]}"
     results = []
     for i in range(1, 6):

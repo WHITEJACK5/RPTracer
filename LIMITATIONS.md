@@ -41,11 +41,12 @@ The following phases were **not fully implemented** in this pass. Rather than le
 
 ### Phase 6 — Production Load Testing (Partially Done)
 - **Plan**: Deploy to a Linux VPS with Redis/Neo4j running, run `k6` or `locust` at 1,000 RPS sustained concurrency, and report p50/p95/p99 under load (not idle single-request latency).
-- **Current state**: Small-scale concurrent numbers obtained on Windows dev box (see below). Full 1,000 RPS production test on Linux is still pending.
-- **Windows dev-box numbers** (`scripts/bench_latency.py`, single uvicorn, in-memory graph):
-  - Sequential (n=200, c=1): p50=100.9ms, p95=433.9ms, p99=983.2ms, 7 req/s
-  - Concurrent (n=600, c=10): p50=959.7ms, p95=1427.9ms, p99=1634.5ms, 10 req/s
-  - **Caveat**: Includes XGBoost model training at cold start (~50ms amortized). Windows localhost transport degrades under high concurrency even for hello-world; sequential figure is the representative single-request latency. Linux/uvloop production numbers will differ significantly.
+- **Current state**: Single fresh run on the same machine as `README.md` (see `README.md` Latency section for canonical numbers; this section mirrors them so there is exactly one source of truth). Full 1,000 RPS production test on Linux is still pending.
+- **Windows dev-box numbers** (`scripts/bench_latency.py`, single uvicorn, in-memory NetworkX, no Redis/Neo4j — fresh run 2026-08-28, Windows 10 build 26200, Python 3.11.9, commit b36e0d5):
+  - Sequential (n=200, c=1): p50=53.3ms, p95=69.7ms, p99=78.1ms, max=100.6ms, 18 req/s single-stream
+  - Concurrent (n=600, c=10): p50=376.8ms, p95=436.2ms, p99=474.0ms, 26 req/s over 22.7s
+  - **Caveat**: In-memory graph, no Redis/Neo4j hops. Windows localhost transport degrades under high concurrency even for hello-world (verified with bare Starlette control app); sequential figure is the representative single-request latency. Linux/uvloop production numbers will differ significantly.
+  - Historical note: prior doc revisions reported p50=100.9ms/10 req/s (commit a0aa47b) and p50=17.0ms/52 req/s (early README) — those are retained only for comparison with date/commit tag, not as current.
 
 ### Walk-Forward Forecast Calibration (Partially Done)
 - Walk-forward lead time and false-alarm rate tests exist (Phase 3). However, the trajectory tracking EWMA slope is currently uncalibrated — the `EARLY_WARNING` threshold is a fixed 30-second forecast window rather than a learned threshold. Future work: calibrate the forecast window on historical data to minimize false alarms at the desired lead time.

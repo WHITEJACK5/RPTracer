@@ -9,7 +9,7 @@
 
 | Component | Cost/1K txns | Notes |
 |---|---|---|
-| **Compute (FastAPI + XGBoost)** | $0.003 | ~17ms p50 latency; 4 vCPU handles 50 req/s |
+| **Compute (FastAPI + XGBoost)** | $0.003 | ~53ms p50 latency (fresh 2026-08-28, 18 req/s single-stream, 26 req/s concurrent; see README/LIMITATIONS) |
 | **Redis (idempotency + feature store)** | $0.002 | Managed Redis $15/mo / ~300K txns/mo |
 | **SQLite WAL (event log + entity state)** | $0.000 | Local disk I/O, no external cost |
 | **LLM Dossier (GPT-4o-mini, 2% rate)** | $0.040 | ~20 calls/1K txns × $0.002/call |
@@ -17,13 +17,13 @@
 | **Total** | **~$0.055/1K** | Without LLM: ~$0.005/1K |
 
 ## Fraud Loss Prevention ROI
-At measured precision 0.646 and recall 0.880 on decoupled actor-level evaluation (see `EVASION_COST.md`):
+At measured precision 0.646 and recall 0.880 on threshold-boundary self-consistency check (see `EVASION_COST.md` — NOT an independent hold-out):
 - Estimated fraud prevented per 1K HIGH-band holds: Rs 3.9L (avg mule ring value x detection rate x precision).
 - TRACER scoring cost per 1K transactions: Rs 4.60 ($0.055 x Rs 84).
 - **ROI**: ~8,500:1 cost-to-prevention ratio (fraud prevented / TRACER cost).
 
 ## False-Negative Cost (the other side of the equation)
-The decoupled evaluation shows recall of 0.880 — roughly 12% of ring operators
+The threshold-boundary check shows recall of 0.880 — roughly 12% of ring operators
 evasion the detector. For each missed ring:
 - **Cost per incident**: Full transaction value + logistics loss (Rs 1.8L–4.5L avg
   per mule ring, materially larger than the Rs 18.5K review-friction cost of a

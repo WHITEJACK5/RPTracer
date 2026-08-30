@@ -15,10 +15,20 @@ TRACER's detector runs on **graph topology heuristics — degree, fan-out,
 connected-component identity-mass analysis** (NetworkX; optional Neo4j mirror):
 
 - ≥4 payment identities on one device ⇒ ring flagged with structural ratio ≥0.72
-- Proven on **novel** rings assembled live through the public API
-  (`backend/tests/test_graph_generalization.py`) — not just the seeded demo fixture
+- Verified the deterministic rule fires correctly end-to-end through the public API
+  (`backend/tests/test_graph_live_api.py`) on unseeded identifiers — not just
+  the seeded demo fixture. The test assembles rings via sequential live API
+  calls and asserts the rule triggers at fan_out ≥4 (live-API wiring
+  verification, not ML generalization)
 - Negative control: benign household fan-out (1 device, 2–3 VPAs) does NOT fire;
   this false-positive-on-structure control is asserted in the same test file
+
+> **GBDT disclosure (cannot be missed): At any calibrated confidence threshold
+> (p≥0.50 / 0.70 / 0.90) this tabular model's standalone recall is 0% on our
+> synthetic benchmark (`python data/generate_synthetic.py` → P=0.000 R=0.000
+> flagged 0–2); it is used only for SHAP explanation surfacing and
+> policy-floor inputs, not as a standalone detector. Ring detection on graph
+> topology is the headline claim for a reason.**
 
 Everything else — RTO/COD scoring, LLM dispute dossiers — is listed under
 [Also included](#also-included-extensions-not-headline-claims).
@@ -27,7 +37,7 @@ Everything else — RTO/COD scoring, LLM dispute dossiers — is listed under
 
 | Command | What it proves |
 |---|---|
-| `python -m pytest backend/tests -q` | 23 tests: bands, idempotent replay, webhook signature honesty, novel-ring detection, negative control, injection sanitization, ledger tamper-evidence |
+| `python -m pytest backend/tests -q` | 154 tests: bands, idempotent replay, webhook signature honesty, novel-ring detection, negative control, injection sanitization, ledger tamper-evidence |
 | `python data/generate_synthetic.py` | GBDT quality vs an **independent** label process + FP cost table |
 | `python scripts/bench_latency.py` | real latency: sequential per-payment p50/p95/p99 |
 | `curl localhost:8000/api/v1/model/report` | live honest-metrics card |
@@ -50,11 +60,18 @@ flag riskiest 5%      : P=0.090  R=0.052  FP/1k-legit=49.8
 
 Read that honestly: on a deliberately hostile benchmark (confounder + annotation
 noise), the tabular GBDT reaches 83% of the theoretical ceiling but modest
-absolute lift. **The tabular score is a supplementary signal for SHAP explanations
-and policy-floor inputs, not a standalone detector — ring detection on graph
-topology is the actual headline claim.** Policy guardrails (hard floors on fan-out
-≥5 devices etc.) guarantee HIGH-band escalation for extreme patterns regardless of
-model output.
+absolute lift. At fixed flag-rates (riskiest 1% / 5%) lift is tiny (R=0.012 /
+0.052).
+
+> **⚠️ Standalone GBDT recall at any calibrated threshold (p≥0.50 / 0.70 /
+> 0.90) is 0% on this synthetic benchmark (`python
+> data/generate_synthetic.py` current output: P=0.000 R=0.000 flagged 0–2);
+> the model is used only for SHAP explanation surfacing and policy-floor
+> inputs, not as a standalone detector. Ring detection on graph topology is
+> the actual headline claim — the GBDT is supplementary.**
+
+Policy guardrails (hard floors on fan-out ≥5 devices etc.) guarantee HIGH-band
+escalation for extreme patterns regardless of model output.
 
 Real-data validation: `python scripts/train_real_data.py` is wired to train a fresh
 model on the [IEEE-CIS Fraud Detection dataset](https://www.kaggle.com/c/ieee-fraud-detection)
@@ -65,18 +82,25 @@ a stated next step, not a completed result.
 
 ### Latency — measured, not invented
 
-`python scripts/bench_latency.py`, local dev box, single uvicorn process:
+`python scripts/bench_latency.py`, local dev box, single uvicorn process
+(fresh run 2026-08-28, Windows 10 build 26200, Python 3.11.9, commit b36e0d5, in-memory NetworkX, no Redis/Neo4j):
 
 ```
 SEQUENTIAL (n=200) — the per-payment decision path:
-  p50=17.0ms  p95=25.2ms  p99=28.5ms  max=29.1ms
-CONCURRENT (n=600, c=10): throughput 52 req/s (Windows localhost transport ceiling)
+  p50=53.3ms  p95=69.7ms  p99=78.1ms  max=100.6ms  18 req/s single-stream
+CONCURRENT (n=600, c=10):
+  p50=376.8ms  p95=436.2ms  p99=474.0ms  throughput 26 req/s over 22.7s
 ```
 
-Conditions: Windows dev machine, in-memory NetworkX graph, no Redis/Neo4j hops.
-Windows loopback degrades under high connection concurrency even for hello-world
-(verified with a bare Starlette control app); the sequential figure is the
-representative SLA measurement here. Linux/uvloop production numbers will differ.
+Conditions: Windows localhost transport degrades under high connection concurrency
+even for hello-world (verified with a bare Starlette control app); the
+sequential figure is the representative SLA measurement here. Linux/uvloop
+production numbers will differ. See `LIMITATIONS.md` Phase 6 for the same
+canonical numbers and caveats (single source of truth).
+
+Historical note: a prior run (pre-2026-08-28) reported p50=17.0ms / 52 req/s;
+that figure was from an earlier machine/commit and is retained only for
+comparison — the numbers above are the current reproducible measurement.
 
 ## The bounded agent (defense-only)
 
