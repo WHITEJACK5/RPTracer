@@ -19,6 +19,7 @@ export default function LoginPage() {
     const email = String(fd.get("email") ?? "");
     setTimeout(() => {
       setSubmitting(false);
+      try { localStorage.setItem("tracer.session", "1"); localStorage.setItem("tracer.session.email", email); } catch {}
       toast.success("Authenticated", { description: email });
       router.push("/dashboard");
     }, 700);

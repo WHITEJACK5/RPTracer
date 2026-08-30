@@ -3,6 +3,7 @@
 import { useMemo, useState, type FormEvent } from "react";
 import { useLedger } from "@/hooks/useApi";
 import { Input, FloatingInput } from "@/components/ui/Input";
+import ErrorState from "@/components/ui/ErrorState";
 import Loader from "@/components/ui/Loader";
 import GlassForm from "@/components/ui/GlassForm";
 import TextReveal from "@/components/ui/TextReveal";
@@ -11,7 +12,7 @@ import type { LedgerEntry } from "@/lib/types";
 type Filters = { q: string; minAmount: string; direction: string };
 
 export default function TransactionsPage() {
-  const { data, isLoading } = useLedger(200);
+  const { data, isLoading, isError, error, refetch } = useLedger(200);
   const [filters, setFilters] = useState<Filters>({ q: "", minAmount: "", direction: "ALL" });
 
   const rows: LedgerEntry[] = useMemo(() => {
@@ -67,13 +68,16 @@ export default function TransactionsPage() {
           <div className="border-b border-border px-5 py-3 font-mono text-[10px] uppercase tracking-wider text-text-muted">
             {rows.length} ENTRIES
           </div>
-          {isLoading ? (
+          {isError ? (
+            <ErrorState title="Couldn't load transactions" message={String((error as Error)?.message || "Ledger unreachable")} onRetry={() => refetch()} />
+          ) : isLoading ? (
             <div className="relative h-64"><Loader center /></div>
           ) : rows.length === 0 ? (
             <p className="p-8 text-center font-mono text-xs text-text-muted">No transactions match your filters.</p>
           ) : (
-            <div className="terminal-scroll max-h-[560px] overflow-y-auto">
-              <table className="w-full text-left text-sm">
+            <div className="terminal-scroll max-h-[560px] overflow-auto">
+              <div className="overflow-x-auto">
+                <table className="w-full min-w-[640px] text-left text-sm">
                 <thead className="sticky top-0 bg-bg-secondary/80 font-mono text-[10px] uppercase tracking-wider text-text-muted backdrop-blur">
                   <tr>
                     <th className="px-5 py-2.5">Event</th>
@@ -86,7 +90,7 @@ export default function TransactionsPage() {
                   {rows.map((r) => (
                     <tr key={r.seq} className="border-t border-border hover:bg-bg-tertiary/40">
                       <td className="px-5 py-2.5 font-mono text-[12px] text-text-secondary">{r.event_id}</td>
-                      <td className="px-3 py-2.5 text-text-primary">{r.action}</td>
+                      <td className="px-3 py-2.5 whitespace-nowrap text-text-primary">{r.action}</td>
                       <td className="px-3 py-2.5">
                         <span className={r.direction === "CREDIT" ? "text-risk-low" : "text-accent"}>{r.direction}</span>
                       </td>
@@ -95,6 +99,7 @@ export default function TransactionsPage() {
                   ))}
                 </tbody>
               </table>
+              </div>
             </div>
           )}
         </div>

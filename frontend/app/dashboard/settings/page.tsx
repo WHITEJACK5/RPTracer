@@ -4,12 +4,14 @@ import { type FormEvent } from "react";
 import { toast } from "sonner";
 import { useAnalysts } from "@/hooks/useApi";
 import AvatarList from "@/components/ui/AvatarList";
+import ErrorState from "@/components/ui/ErrorState";
 import GlassForm from "@/components/ui/GlassForm";
 import { Input } from "@/components/ui/Input";
+import Loader from "@/components/ui/Loader";
 import TextReveal from "@/components/ui/TextReveal";
 
 export default function SettingsPage() {
-  const { data: analysts } = useAnalysts();
+  const { data: analysts, isLoading: analystsLoading, isError: analystsError, refetch: refetchAnalysts } = useAnalysts();
 
   function onSave(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -34,9 +36,15 @@ export default function SettingsPage() {
         <div className="glass flex flex-col gap-4 p-6">
           <h3 className="font-sans text-lg font-bold text-text-primary">Response team</h3>
           <p className="text-sm text-text-secondary">Analysts currently rostered on the TRACER watch.</p>
-          <AvatarList analysts={analysts ?? []} className="flex-wrap" />
+          {analystsError ? (
+            <ErrorState title="Couldn't load analysts" message="Roster unreachable" onRetry={() => refetchAnalysts()} />
+          ) : analystsLoading ? (
+            <Loader size="sm" label="loading analysts…" />
+          ) : (
+            <AvatarList analysts={analysts ?? []} className="flex-wrap" />
+          )}
           <div className="mt-auto">
-            <Input label="Invite analyst" placeholder="name@razorpay.com" />
+            <Input label="Invite analyst" placeholder="name@razorpay.com" disabled hint="Coming soon — invite system not yet backed by API" />
           </div>
         </div>
       </div>

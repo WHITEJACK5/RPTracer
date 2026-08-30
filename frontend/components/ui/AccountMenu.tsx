@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useTheme } from "next-themes";
-import { Accessibility, Bell, Palette, Settings, User } from "lucide-react";
+import { Accessibility, Bell, LogOut, Palette, Settings, User } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 type Item =
@@ -47,6 +47,18 @@ export default function AccountMenu() {
     { label: "Accessibility", icon: Accessibility, href: "/dashboard/settings" },
     { label: "Notifications", icon: Bell, href: "/dashboard/settings" },
   ];
+
+  const signOut: Item = {
+    label: "Sign out",
+    icon: LogOut,
+    onSelect: () => {
+      try {
+        localStorage.removeItem("tracer.session");
+        localStorage.removeItem("tracer.session.email");
+      } catch {}
+      window.location.href = "/login";
+    },
+  };
 
   return (
     <div ref={ref} className="relative">
@@ -97,6 +109,20 @@ export default function AccountMenu() {
               </button>
             );
           })}
+          <div className="my-1 h-px bg-border" role="separator" aria-hidden />
+          <button
+            type="button"
+            role="menuitem"
+            aria-label="Sign out"
+            onClick={() => {
+              signOut.onSelect();
+              setOpen(false);
+            }}
+            className="flex w-full items-center gap-2.5 rounded-md px-2.5 py-2 text-sm text-text-secondary transition-colors hover:bg-bg-tertiary hover:text-text-primary text-left"
+          >
+            <LogOut size={15} className="text-text-muted" />
+            {signOut.label}
+          </button>
         </div>
       )}
     </div>

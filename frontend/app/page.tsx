@@ -149,8 +149,9 @@ export default function LandingPage() {
             TRACER
           </Link>
           <Link
-            href="/dashboard"
+            href="/login"
             className="rounded-md bg-accent px-4 py-1.5 text-sm font-semibold text-white hover:bg-accent-hover"
+            aria-label="Sign in to open dashboard"
           >
             Open Dashboard
           </Link>
@@ -176,13 +177,14 @@ export default function LandingPage() {
 
         <div className="mt-8 flex items-center gap-4">
           <Link
-            href="/dashboard"
+            href="/login"
             className="rounded-md bg-accent px-6 py-3 text-sm font-semibold text-white hover:bg-accent-hover"
+            aria-label="Sign in to open dashboard"
           >
             Open Dashboard
           </Link>
           <Link
-            href="/dashboard/sandbox"
+            href="/login"
             className="rounded-md border border-accent/30 bg-transparent px-6 py-3 text-sm font-semibold text-accent hover:bg-accent/10"
           >
             Try the Sandbox

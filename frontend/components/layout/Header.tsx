@@ -83,6 +83,13 @@ export default function Header({
 
           <div className="flex-1" />
           <div className="flex items-center gap-2">
+            <Link
+              href="/login"
+              className="hidden rounded-md px-3 py-1.5 text-sm font-medium text-text-secondary transition-colors hover:bg-bg-tertiary hover:text-text-primary md:inline-flex"
+              aria-label="Sign in"
+            >
+              Sign in
+            </Link>
             <ThemeToggle />
             <AccountMenu />
           </div>
@@ -140,6 +147,14 @@ export default function Header({
               </Link>
             );
           })}
+          <Link
+            href="/login"
+            onClick={() => setDrawerOpen(false)}
+            className="mt-3 flex items-center gap-3 rounded-md border border-border px-3 py-2.5 text-sm font-medium text-text-secondary hover:bg-bg-tertiary hover:text-text-primary"
+            aria-label="Sign in"
+          >
+            Sign in
+          </Link>
         </div>
       </nav>
     </>

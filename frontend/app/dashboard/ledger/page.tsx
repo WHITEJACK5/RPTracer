@@ -1,6 +1,7 @@
 ﻿"use client";
 
 import { useLedger, useLedgerStats } from "@/hooks/useApi";
+import ErrorState from "@/components/ui/ErrorState";
 import Loader from "@/components/ui/Loader";
 import StreamingText from "@/components/ui/StreamingText";
 import TextReveal from "@/components/ui/TextReveal";
@@ -24,8 +25,8 @@ ${recent || "- No recent entries recorded"}`;
 }
 
 export default function LedgerPage() {
-  const { data: stats } = useLedgerStats();
-  const { data: rows, isLoading } = useLedger(50);
+  const { data: stats, isError: statsError, error: statsErr, refetch: refetchStats } = useLedgerStats();
+  const { data: rows, isLoading, isError, error, refetch } = useLedger(50);
   const safeRows = Array.isArray(rows) ? rows : [];
   const report = buildReport(stats, safeRows);
 
@@ -38,15 +39,23 @@ export default function LedgerPage() {
         <StreamingText text={report} speed={12} markdown ariaLabel="Ledger integrity report" />
       </div>
 
-      <div className="glass overflow-hidden p-0">
-        <div className="border-b border-border px-5 py-3 font-mono text-[10px] uppercase tracking-wider text-text-muted">
-          CHAIN ENTRIES
-        </div>
-        {isLoading ? (
-          <div className="relative h-48"><Loader center /></div>
-        ) : (
-          <div className="terminal-scroll max-h-[420px] overflow-y-auto">
-            <table className="w-full text-left text-sm">
+      {(isError || statsError) ? (
+        <ErrorState
+          title="Couldn't load ledger"
+          message={String((error as Error)?.message || (statsErr as Error)?.message || "Ledger unreachable")}
+          onRetry={() => { refetch(); refetchStats(); }}
+        />
+      ) : (
+        <div className="glass overflow-hidden p-0">
+          <div className="border-b border-border px-5 py-3 font-mono text-[10px] uppercase tracking-wider text-text-muted">
+            CHAIN ENTRIES
+          </div>
+          {isLoading ? (
+            <div className="relative h-48"><Loader center /></div>
+          ) : (
+          <div className="terminal-scroll max-h-[420px] overflow-auto">
+            <div className="overflow-x-auto">
+              <table className="w-full min-w-[640px] text-left text-sm">
               <thead className="sticky top-0 bg-bg-secondary/80 font-mono text-[10px] uppercase tracking-wider text-text-muted backdrop-blur">
                 <tr>
                   <th className="px-5 py-2.5">#</th>
@@ -61,16 +70,18 @@ export default function LedgerPage() {
                   <tr key={r.seq} className="border-t border-border hover:bg-bg-tertiary/40">
                     <td className="px-5 py-2.5 font-mono text-[12px] text-text-muted">{r.seq}</td>
                     <td className="px-3 py-2.5 font-mono text-[12px] text-text-secondary">{r.event_id}</td>
-                    <td className="px-3 py-2.5 text-text-primary">{r.action}</td>
+                    <td className="px-3 py-2.5 whitespace-nowrap text-text-primary">{r.action}</td>
                     <td className="px-3 py-2.5 text-text-secondary">{r.actor}</td>
                     <td className="px-3 py-2.5 font-mono text-[11px] text-risk-low/80">{r.hash.slice(0, 12)}…</td>
                   </tr>
                 ))}
               </tbody>
             </table>
+            </div>
           </div>
-        )}
-      </div>
+          )}
+        </div>
+      )}
     </div>
   );
 }

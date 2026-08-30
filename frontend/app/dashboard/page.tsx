@@ -14,6 +14,7 @@ import {
 } from "recharts";
 import { useLedgerStats, useModelReport } from "@/hooks/useApi";
 import { useLiveFeed } from "@/hooks/useLiveFeed";
+import ErrorState from "@/components/ui/ErrorState";
 import Loader from "@/components/ui/Loader";
 import StreamingText from "@/components/ui/StreamingText";
 import LogPanel from "@/components/ui/LogPanel";
@@ -31,8 +32,8 @@ function Kpi({ label, value, tone }: { label: string; value: string; tone?: stri
 const PIE_COLORS = ["var(--color-risk-low)", "var(--color-entity-vpa)", "var(--color-danger)", "var(--color-text-muted)"];
 
 export default function DashboardOverview() {
-  const { data: model, isLoading: mLoading } = useModelReport();
-  const { data: ledger, isLoading: lLoading } = useLedgerStats();
+  const { data: model, isLoading: mLoading, isError: mError, error: mErr, refetch: refetchModel } = useModelReport();
+  const { data: ledger, isLoading: lLoading, isError: lError, error: lErr, refetch: refetchLedger } = useLedgerStats();
   const { alerts, connected } = useLiveFeed();
   const latest = alerts[0];
 
@@ -73,7 +74,13 @@ export default function DashboardOverview() {
         </span>
       </div>
 
-      {mLoading || lLoading ? (
+      {(mError || lError) ? (
+        <ErrorState
+          title="Couldn't load overview"
+          message={String((mErr as Error)?.message || (lErr as Error)?.message || "Risk engine unreachable — check API connectivity")}
+          onRetry={() => { refetchModel(); refetchLedger(); }}
+        />
+      ) : mLoading || lLoading ? (
         <div className="relative h-64"><Loader center /></div>
       ) : (
         <>

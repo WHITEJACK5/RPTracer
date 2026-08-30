@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useAnalysts } from "@/hooks/useApi";
 import AvatarList from "@/components/ui/AvatarList";
 import { Input } from "@/components/ui/Input";
+import ErrorState from "@/components/ui/ErrorState";
 import Loader from "@/components/ui/Loader";
 import Button from "@/components/ui/Button";
 import TextReveal from "@/components/ui/TextReveal";
@@ -19,7 +20,7 @@ const GraphCanvas = dynamic(() => import("@/components/GraphCanvas"), {
 });
 
 export default function GraphPage() {
-  const { data: analysts } = useAnalysts();
+  const { data: analysts, isLoading: analystsLoading, isError: analystsError, refetch: refetchAnalysts } = useAnalysts();
   const [override, setOverride] = useState("");
   const [active, setActive] = useState<string | null>(null);
   const [refresh, setRefresh] = useState(0);
@@ -30,7 +31,13 @@ export default function GraphPage() {
     <div className="flex flex-col gap-6">
       <div className="flex flex-wrap items-end justify-between gap-3">
         <TextReveal as="h1" text="Entity Graph" by="char" className="text-3xl font-bold text-text-primary" />
-        <AvatarList analysts={analysts ?? []} className="flex-wrap" />
+        {analystsError ? (
+          <ErrorState title="Couldn't load analysts" message="Analyst roster unreachable" onRetry={() => refetchAnalysts()} />
+        ) : analystsLoading ? (
+          <Loader size="sm" />
+        ) : (
+          <AvatarList analysts={analysts ?? []} className="flex-wrap" />
+        )}
       </div>
 
       <p className="text-sm text-text-secondary">

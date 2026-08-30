@@ -3,6 +3,8 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useEvaluate } from "@/hooks/useApi";
 import Button from "@/components/ui/Button";
+import ErrorState from "@/components/ui/ErrorState";
+import Loader from "@/components/ui/Loader";
 import TextReveal from "@/components/ui/TextReveal";
 import type { RiskEvaluation, Preset } from "@/lib/types";
 import { cn } from "@/lib/utils";
@@ -283,6 +285,18 @@ export default function SandboxPage() {
           Submit Custom Payload
         </Button>
       </section>
+
+      {evaluate.isError && (
+        <ErrorState
+          title="Couldn't score payload"
+          message={String((evaluate.error as Error)?.message || "Risk engine unreachable — check API connectivity")}
+          onRetry={() => evaluate.reset()}
+        />
+      )}
+
+      {evaluate.isPending && !result && (
+        <div className="relative h-32"><Loader center label="scoring…" /></div>
+      )}
 
       {/* Risk Gauge — live result */}
       {result && (
