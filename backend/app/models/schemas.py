@@ -56,6 +56,7 @@ class Context(BaseModel):
     amount_sum_24h: float = 0.0
     distinct_devices_24h: int = 1
     hour_of_day: int = Field(default_factory=lambda: time.localtime().tm_hour)
+    session_id: str | None = None
 
 
 class TransactionEvent(BaseModel):

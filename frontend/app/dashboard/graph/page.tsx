@@ -106,7 +106,7 @@ export default function GraphPage() {
         <span className="font-mono text-[11px] text-text-muted">Each burst creates a new session — pick to isolate its ring and avoid cluster overlap.</span>
       </div>
 
-      <GraphCanvas key={`${refresh}-${selectedSession}`} center={center} refreshToken={refresh} />
+      <GraphCanvas key={`${refresh}-${selectedSession}`} center={center} refreshToken={refresh} session={selectedSession} />
     </div>
   );
 }

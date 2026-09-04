@@ -41,10 +41,10 @@ export function useEvaluate() {
 }
 
 /** GET /api/v1/graph/topology — ego-graph around an optional center entity. */
-export function useTopology(center?: string) {
+export function useTopology(center?: string, session?: string) {
   return useQuery({
-    queryKey: queryKeys.topology(center),
-    queryFn: () => fetchTopology(center),
+    queryKey: [...queryKeys.topology(center), session ?? "all"] as const,
+    queryFn: () => fetchTopology(center, session),
     retry: 1,
     refetchOnWindowFocus: false,
   });

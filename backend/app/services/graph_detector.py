@@ -56,8 +56,12 @@ class MuleDetector:
 
     def _add(self, kind: str, value: str, **attrs: Any) -> str:
         node_id = f"{kind}:{value}"
+        session = attrs.pop("session_id", None)
         if not self.g.has_node(node_id):
-            self.g.add_node(node_id, type=kind, label=value, **attrs)
+            self.g.add_node(node_id, type=kind, label=value, sessions=set([session]) if session else set(), **attrs)
+        else:
+            if session:
+                self.g.nodes[node_id].setdefault("sessions", set()).add(session)
         self._touch(node_id)
         return node_id
 
@@ -65,11 +69,13 @@ class MuleDetector:
         self._access.pop(node_id, None)
         self._access[node_id] = time.monotonic()
 
-    def _link(self, a: str, b: str, weight: int = 1) -> None:
+    def _link(self, a: str, b: str, weight: int = 1, session_id: str | None = None) -> None:
         if self.g.has_edge(a, b):
             self.g[a][b]["weight"] += weight
+            if session_id:
+                self.g[a][b].setdefault("sessions", set()).add(session_id)
         else:
-            self.g.add_edge(a, b, weight=weight)
+            self.g.add_edge(a, b, weight=weight, sessions=set([session_id]) if session_id else set())
         self._touch(a)
         self._touch(b)
 
@@ -174,36 +180,37 @@ class MuleDetector:
 
     def _ingest(self, ev: TransactionEvent) -> list[str]:
         nodes: list[str] = []
+        session = ev.context.session_id
         dev = vpa = card = ip = email = None
         if ev.context.device_id:
-            dev = self._add("device", ev.context.device_id)
+            dev = self._add("device", ev.context.device_id, session_id=session)
             nodes.append(dev)
         if ev.instrument.vpa:
-            vpa = self._add("vpa", ev.instrument.vpa)
+            vpa = self._add("vpa", ev.instrument.vpa, session_id=session)
             nodes.append(vpa)
         if ev.instrument.card_fingerprint:
-            card = self._add("card", ev.instrument.card_fingerprint)
+            card = self._add("card", ev.instrument.card_fingerprint, session_id=session)
             nodes.append(card)
         if ev.context.ip:
-            ip = self._add("ip", ev.context.ip)
+            ip = self._add("ip", ev.context.ip, session_id=session)
             nodes.append(ip)
         if ev.context.email:
-            email = self._add("email", ev.context.email)
+            email = self._add("email", ev.context.email, session_id=session)
             nodes.append(email)
-        cust = self._add("customer", ev.customer.id)
+        cust = self._add("customer", ev.customer.id, session_id=session)
         nodes.append(cust)
         if dev and vpa:
-            self._link(dev, vpa)
+            self._link(dev, vpa, session_id=session)
         if dev and card:
-            self._link(dev, card)
+            self._link(dev, card, session_id=session)
         if dev and ip:
-            self._link(dev, ip)
+            self._link(dev, ip, session_id=session)
         if card and vpa:
-            self._link(card, vpa)
+            self._link(card, vpa, session_id=session)
         if vpa and email:
-            self._link(vpa, email)
+            self._link(vpa, email, session_id=session)
         if vpa and cust:
-            self._link(vpa, cust)
+            self._link(vpa, cust, session_id=session)
         return nodes
 
     def _fan_out(self, node: str) -> int:
@@ -281,23 +288,69 @@ class MuleDetector:
         return None
 
     # ------------------------------------------------------------- UI canvas
-    def topology(self, center: str | None = None) -> dict[str, Any]:
+    def topology(self, center: str | None = None, session: str | None = None) -> dict[str, Any]:
+        # Session-aware filtering: if session provided, restrict to nodes/edges of that session
+        def in_session(node: str) -> bool:
+            if not session:
+                return True
+            data = self.g.nodes[node]
+            sessions = data.get("sessions")
+            if not sessions:
+                return False
+            return session in sessions
+
+        def edge_in_session(u: str, v: str) -> bool:
+            if not session:
+                return True
+            data = self.g.get_edge_data(u, v)
+            if not data:
+                return False
+            sessions = data.get("sessions")
+            if not sessions:
+                # Fallback: if edge has no session but both nodes are in session, include
+                return in_session(u) and in_session(v)
+            return session in sessions
+
         src = self._resolve_center(center) if center else None
+        # If center provided but not in session, try to resolve within session
+        if src and session and not in_session(src):
+            # Try to find same identifier within session
+            alt = None
+            for n in self.g.nodes:
+                if n.partition(":")[2] == src.partition(":")[2] and in_session(n):
+                    alt = n
+                    break
+            src = alt
         if src is None:
             candidates = self._last_entities or list(self.g.nodes)
+            if session:
+                # Filter candidates to session
+                candidates = [n for n in candidates if self.g.has_node(n) and in_session(n)]
+                if not candidates:
+                    # Fallback: any node in session
+                    candidates = [n for n in self.g.nodes if in_session(n)]
             # Prefer most-recent high-degree entity (reverse order = most recent first)
             src = next((n for n in reversed(candidates)
-                        if self.g.has_node(n) and self.g.degree(n) >= 3), None)
-            # If no high-degree in last entities, or chosen is not a ring, search globally for best ring
+                        if self.g.has_node(n) and in_session(n) and self.g.degree(n) >= 3), None)
+            # If no high-degree in last entities, or chosen is not a ring, search globally for best ring within session
             needs_better = src is None or (self.g.has_node(src) and self._fan_out(src) < 4 and not self.g.nodes[src].get("mule"))
             if needs_better:
                 best = None
                 best_score = -1
-                for n in reversed(list(self._access.keys())):
+                # Search in session-filtered nodes
+                search_pool = [n for n in reversed(list(self._access.keys())) if self.g.has_node(n) and in_session(n)] if session else reversed(list(self._access.keys()))
+                for n in search_pool:
                     if not self.g.has_node(n) or self.g.nodes[n].get("type") != "device":
                         continue
+                    if session and not in_session(n):
+                        continue
                     fan = self._fan_out(n)
-                    mule_neighbors = sum(1 for nb in self.g.neighbors(n) if self.g.nodes[nb].get("mule"))
+                    # For session-filtered, also consider edge session
+                    if session:
+                        # Count only mule neighbors within session
+                        mule_neighbors = sum(1 for nb in self.g.neighbors(n) if edge_in_session(n, nb) and self.g.nodes[nb].get("mule"))
+                    else:
+                        mule_neighbors = sum(1 for nb in self.g.neighbors(n) if self.g.nodes[nb].get("mule"))
                     score = fan * 10 + mule_neighbors * 5 + self.g.degree(n)
                     if fan >= 4 and score > best_score:
                         best = n
@@ -305,20 +358,55 @@ class MuleDetector:
                 if best is not None:
                     src = best
                 elif src is None and candidates:
-                    src = next((n for n in reversed(candidates) if self.g.has_node(n)), None)
+                    src = next((n for n in reversed(candidates) if self.g.has_node(n) and in_session(n)), None)
         if src is None:
             return {"nodes": [], "edges": []}
 
-        lengths = nx.single_source_shortest_path_length(self.g, src, cutoff=2)
+        # Session-aware BFS: only traverse edges within session if session filter active
+        if session:
+            # Build session-filtered subgraph for BFS
+            def session_neighbors(node: str):
+                return [nb for nb in self.g.neighbors(node) if edge_in_session(node, nb)]
+            # BFS with cutoff 2 using session-filtered edges
+            lengths = {src: 0}
+            frontier = [src]
+            for dist in range(1, 3):
+                next_frontier = []
+                for u in frontier:
+                    for v in session_neighbors(u):
+                        if v not in lengths:
+                            lengths[v] = dist
+                            next_frontier.append(v)
+                frontier = next_frontier
+                if not frontier:
+                    break
+        else:
+            lengths = nx.single_source_shortest_path_length(self.g, src, cutoff=2)
         keep = sorted(lengths, key=lambda n: lengths[n])[:_MAX_SNAPSHOT_NODES]
+        # Filter keep to session nodes if needed (already is)
         sub = self.g.subgraph(keep)
-        nodes = [{
-            "id": n,
-            "type": data.get("type", "?"),
-            "label": data.get("label", n),
-            "mule": bool(data.get("mule")),
-        } for n, data in ((n, self.g.nodes[n]) for n in sub.nodes)]
-        edges = [[u, v] for u, v in sub.edges()]
+        # Further filter sub to session edges/nodes if session active
+        if session:
+            # Filter nodes and edges to session
+            filtered_nodes = [n for n in sub.nodes if in_session(n)]
+            # Edges must also be in session
+            filtered_edges = [[u, v] for u, v in sub.edges() if edge_in_session(u, v)]
+            # Rebuild node list to only filtered
+            nodes = [{
+                "id": n,
+                "type": data.get("type", "?"),
+                "label": data.get("label", n),
+                "mule": bool(data.get("mule")),
+            } for n in filtered_nodes for _, data in [(n, self.g.nodes[n])]]
+            edges = filtered_edges
+        else:
+            nodes = [{
+                "id": n,
+                "type": data.get("type", "?"),
+                "label": data.get("label", n),
+                "mule": bool(data.get("mule")),
+            } for n, data in ((n, self.g.nodes[n]) for n in sub.nodes)]
+            edges = [[u, v] for u, v in sub.edges()]
         return {"center": src, "nodes": nodes, "edges": edges}
 
 

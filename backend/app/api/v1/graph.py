@@ -14,8 +14,8 @@ router = APIRouter(prefix="/api/v1/graph", tags=["risk"], dependencies=[Depends(
 
 
 @router.get("/topology")
-def topology(center: str | None = None) -> dict:
-    return get_detector().topology(center=center)
+def topology(center: str | None = None, session: str | None = None) -> dict:
+    return get_detector().topology(center=center, session=session)
 
 
 @router.post("/reset-demo")

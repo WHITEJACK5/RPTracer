@@ -172,7 +172,11 @@ export default function SandboxPage() {
   }, [result]);
 
   const fire = useCallback((preset: Preset) => {
-    const payload = { ...preset.payload, event_id: `sandbox_${preset.label.replace(/\s+/g, "_").toLowerCase()}_${Date.now()}` };
+    const payload: Record<string, unknown> & { context?: Record<string, unknown> } = { ...preset.payload as Record<string, unknown>, event_id: `sandbox_${preset.label.replace(/\s+/g, "_").toLowerCase()}_${Date.now()}` };
+    // Ensure session isolation for per-session graph
+    const ctx = (payload.context as Record<string, unknown>) || {};
+    if (!ctx.session_id) ctx.session_id = `sess_${Date.now()}`;
+    payload.context = ctx;
     evaluate.mutate(payload, {
       onSuccess: (data) => {
         setResult(data.data);
@@ -205,6 +209,7 @@ export default function SandboxPage() {
           amount_sum_24h: 45000 * (i + 1),
           distinct_devices_24h: 1,
           hour_of_day: 3,
+          session_id: `ringseq_${base}`,
         },
       };
       evaluate.mutate(payload, {
@@ -257,6 +262,7 @@ export default function SandboxPage() {
               amount_sum_24h: 5000 + Math.floor(Math.random() * 80000),
               distinct_devices_24h: 1 + Math.floor(Math.random() * 3),
               hour_of_day: Math.floor(Math.random() * 24),
+              session_id: String(burstId),
             },
           };
         } else {
@@ -285,6 +291,7 @@ export default function SandboxPage() {
             amount_sum_24h: Math.floor(Math.random() * 18000),
             distinct_devices_24h: 1,
             hour_of_day: 10 + Math.floor(Math.random() * 8),
+            session_id: String(burstId),
           },
           };
         }

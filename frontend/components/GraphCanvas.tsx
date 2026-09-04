@@ -115,7 +115,7 @@ function computeLayout(nodes: TopoNode[], edges: [string, string][]) {
 }
 
 /** Industrial professional mule-ring graph canvas with zoom, pan, and node inspector. */
-export default function GraphCanvas({ center, refreshToken }: { center?: string | null; refreshToken: number }) {
+export default function GraphCanvas({ center, refreshToken, session }: { center?: string | null; refreshToken: number; session?: string | null }) {
   const [data, setData] = useState<{ center?: string; nodes: TopoNode[]; edges: [string, string][] } | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [hover, setHover] = useState<string | null>(null);
@@ -132,11 +132,12 @@ export default function GraphCanvas({ center, refreshToken }: { center?: string 
     let alive = true;
     setError(null);
     const cid = center && !center.includes(":") ? `device:${center}` : center ?? undefined;
-    fetchTopology(cid)
+    const sid = session && session !== "live" ? session : undefined;
+    fetchTopology(cid, sid)
       .then((d) => alive && setData(d))
       .catch((e) => alive && setError(String(e)));
     return () => { alive = false; };
-  }, [center, refreshToken, retryTick]);
+  }, [center, refreshToken, retryTick, session]);
 
   // Reset view on new data
   useEffect(() => {
