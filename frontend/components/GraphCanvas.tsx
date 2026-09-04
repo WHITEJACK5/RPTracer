@@ -192,24 +192,24 @@ export default function GraphCanvas({ center, refreshToken }: { center?: string 
   return (
     <section className="glass relative flex flex-col p-5">
       <div className="mb-3 flex flex-wrap items-center gap-3">
-        <h2 className="font-sans text-sm font-semibold tracking-widest text-text-muted">MULE-RING GRAPH CANVAS</h2>
+        <h2 className="font-sans text-[15px] font-semibold tracking-widest text-text-muted">MULE-RING GRAPH CANVAS</h2>
         {data && (
           <>
-            <span className="chip font-mono text-[10px]">{data.nodes.length} nodes</span>
-            <span className="chip font-mono text-[10px]">{data.edges.length} edges</span>
+            <span className="chip px-3 py-1 font-mono text-xs">{data.nodes.length} nodes</span>
+            <span className="chip px-3 py-1 font-mono text-xs">{data.edges.length} edges</span>
             {muleCount > 0 && (
-              <span className="chip !border-danger/40 !bg-danger/10 font-mono text-[10px] text-danger">⬤ {muleCount} MULE NODES</span>
+              <span className="chip !border-danger/40 !bg-danger/10 px-3 py-1 font-mono text-xs text-danger">⬤ {muleCount} MULE NODES</span>
             )}
           </>
         )}
         <span className="flex-1" />
-        <div className="flex items-center gap-1.5">
-          <button onClick={zoomOut} className="chip !px-2 py-1 text-xs hover:bg-bg-tertiary" aria-label="Zoom out">−</button>
-          <span className="w-12 text-center font-mono text-[11px] text-text-muted">{Math.round(zoom * 100)}%</span>
-          <button onClick={zoomIn} className="chip !px-2 py-1 text-xs hover:bg-bg-tertiary" aria-label="Zoom in">+</button>
-          <button onClick={resetView} className="chip !px-2 py-1 font-mono text-[10px] hover:bg-bg-tertiary">RESET</button>
+        <div className="flex items-center gap-2">
+          <button onClick={zoomOut} className="chip !px-3 !py-1.5 text-sm font-medium hover:bg-bg-tertiary" aria-label="Zoom out">−</button>
+          <span className="w-14 text-center font-mono text-xs font-medium text-text-muted">{Math.round(zoom * 100)}%</span>
+          <button onClick={zoomIn} className="chip !px-3 !py-1.5 text-sm font-medium hover:bg-bg-tertiary" aria-label="Zoom in">+</button>
+          <button onClick={resetView} className="chip !px-3 !py-1.5 font-mono text-xs font-medium hover:bg-bg-tertiary">RESET</button>
         </div>
-        <span className="hidden font-mono text-[10px] text-text-muted lg:inline">NetworkX · radius 2 · drag to pan · scroll to zoom · click node for details</span>
+        <span className="hidden font-mono text-xs text-text-muted lg:inline">NetworkX · radius 2 · drag to pan · scroll to zoom · click node for details</span>
       </div>
 
       <div className="relative overflow-hidden rounded-md border border-border bg-bg-primary/40" style={{ cursor: isDragging ? "grabbing" : "grab" }}>
