@@ -355,16 +355,16 @@ export default function GraphCanvas({ center, refreshToken }: { center?: string 
         )}
       </div>
 
-      <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1.5">
+      <div className="mt-3 flex flex-wrap gap-x-5 gap-y-2">
         {Object.entries(TYPE_STYLE).map(([k, v]) => (
-          <span key={k} className="flex items-center gap-1.5 font-mono text-[9.5px] tracking-wide text-text-secondary">
-            <span className="h-2 w-2 rounded-full" style={{ background: v.color }} />{v.label.toUpperCase()}
+          <span key={k} className="flex items-center gap-2 font-mono text-xs font-medium tracking-wide text-text-secondary">
+            <span className="h-2.5 w-2.5 rounded-full" style={{ background: v.color }} />{v.label.toUpperCase()}
           </span>
         ))}
-        <span className="flex items-center gap-1.5 font-mono text-[9.5px] text-danger">
-          <span className="h-2 w-2 rounded-full bg-danger shadow-accent" />FLAGGED MULE
+        <span className="flex items-center gap-2 font-mono text-xs font-medium text-danger">
+          <span className="h-2.5 w-2.5 rounded-full bg-danger shadow-accent" />FLAGGED MULE
         </span>
-        <span className="ml-auto hidden font-mono text-[10px] text-text-muted lg:inline">Tip: Scroll to zoom · Drag to pan · Click node → inspect</span>
+        <span className="ml-auto hidden font-mono text-xs font-medium text-text-muted lg:inline">Tip: Scroll to zoom · Drag to pan · Click node → inspect</span>
       </div>
     </section>
   );
