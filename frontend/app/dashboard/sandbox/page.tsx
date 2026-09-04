@@ -1,7 +1,10 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { useEvaluate } from "@/hooks/useApi";
+import { evaluateRisk } from "@/lib/api";
+import { queryKeys } from "@/hooks/useApi";
 import Button from "@/components/ui/Button";
 import ErrorState from "@/components/ui/ErrorState";
 import Loader from "@/components/ui/Loader";
@@ -122,6 +125,7 @@ function bandBg(band: string) {
 
 export default function SandboxPage() {
   const evaluate = useEvaluate();
+  const qc = useQueryClient();
   const [result, setResult] = useState<RiskEvaluation | null>(null);
   const [history, setHistory] = useState<{ ts: number; r: RiskEvaluation }[]>([]);
   const [ringBuilding, setRingBuilding] = useState(false);
@@ -283,31 +287,36 @@ export default function SandboxPage() {
           };
         }
         batchPromises.push(
-          new Promise<void>((resolve) => {
-            evaluate.mutate(payload as object, {
-              onSuccess: (data) => {
-                const band = data.data.risk_band;
-                if (band === "HIGH") high += 1; else if (band === "MEDIUM") medium += 1; else low += 1;
-                setResult(data.data);
-                setHistory((prev) => [{ ts: Date.now(), r: data.data }, ...prev].slice(0, 30));
-                setBurstProgress((p) => p + 1);
-                resolve();
-              },
-              onError: () => {
-                setBurstProgress((p) => p + 1);
-                resolve();
-              },
-            });
-          })
+          (async () => {
+            try {
+              const { data } = await evaluateRisk(payload as object);
+              const band = data.risk_band;
+              if (band === "HIGH") high += 1; else if (band === "MEDIUM") medium += 1; else low += 1;
+              setResult(data);
+              setHistory((prev) => [{ ts: Date.now(), r: data }, ...prev].slice(0, 30));
+            } catch {
+              // ignore single failure, still count progress
+            } finally {
+              setBurstProgress((p) => p + 1);
+            }
+          })()
         );
       }
       await Promise.all(batchPromises);
+      // Sync Overview/Ledger/Graph live every batch
+      qc.invalidateQueries({ queryKey: queryKeys.ledgerStats });
+      qc.invalidateQueries({ queryKey: queryKeys.ledger() });
+      qc.invalidateQueries({ queryKey: queryKeys.topology() });
       if (burstRef.current.cancelled) break;
       await new Promise((r) => setTimeout(r, 12)); // tiny yield, keeps 5000/min safe (~18 rps effective)
     }
     setBurstStats({ high, medium, low });
     setBurstBuilding(false);
-  }, [evaluate]);
+    // Final sync
+    qc.invalidateQueries({ queryKey: queryKeys.ledgerStats });
+    qc.invalidateQueries({ queryKey: queryKeys.ledger() });
+    qc.invalidateQueries({ queryKey: queryKeys.topology() });
+  }, [qc]);
 
   const fireCustom = useCallback(() => {
     try {
