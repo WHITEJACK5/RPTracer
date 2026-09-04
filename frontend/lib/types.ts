@@ -128,11 +128,14 @@ export type LedgerStat = {
 export type LedgerEntry = {
   seq: number;
   ts: string;
+  ts_ms?: number;
   event_id: string;
   action: string;
   actor: string;
   amount: number;
   direction: "CREDIT" | "DEBIT";
+  side?: "CREDIT" | "DEBIT";
+  band?: "LOW" | "MEDIUM" | "HIGH";
   prev_hash: string;
   hash: string;
 };

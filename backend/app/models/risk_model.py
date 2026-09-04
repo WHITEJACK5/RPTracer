@@ -33,15 +33,15 @@ BASELINE: dict[str, float] = {
 }
 
 WEIGHTS: dict[str, float] = {
-    "amount_log": 0.55, "amount_gt_50k": 0.75, "is_cod": 1.20,
-    "address_mismatch": 1.15, "account_newness": 0.70, "new_customer": 0.55,
-    "txn_rate_1h": 0.95, "txn_rate_24h": 0.85, "amount_velocity": 0.70,
-    "avg_ticket_ratio": 0.45, "device_spread": 0.60, "device_fan_out": 2.10,
-    "vpa_degree": 1.05, "card_share": 0.90, "ip_crowding": 0.65,
-    "rto_rate": 1.35, "night_hour": 0.45, "disposable_email": 1.05,
-    "mule_confidence": 2.40,
+    "amount_log": 0.18, "amount_gt_50k": 0.22, "is_cod": 1.25,
+    "address_mismatch": 1.20, "account_newness": 0.75, "new_customer": 0.60,
+    "txn_rate_1h": 1.10, "txn_rate_24h": 0.95, "amount_velocity": 0.75,
+    "avg_ticket_ratio": 0.50, "device_spread": 0.75, "device_fan_out": 3.20,
+    "vpa_degree": 1.45, "card_share": 1.05, "ip_crowding": 0.85,
+    "rto_rate": 1.40, "night_hour": 0.40, "disposable_email": 1.15,
+    "mule_confidence": 3.40,
 }
-_BIAS = -3.35
+_BIAS = -3.55
 # WEIGHTS/_BIAS above are an engineering PRIOR used by (a) the calibrated-linear
 # fallback scorer when xgboost is unavailable and (b) SHAP-style attribution
 # anchors. They are NOT the label function — training labels come exclusively

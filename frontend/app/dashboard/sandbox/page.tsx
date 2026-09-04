@@ -240,10 +240,10 @@ export default function SandboxPage() {
         let payload: Record<string, unknown>;
         if (isMuleRing) {
           const dev = muleDevices[Math.floor(Math.random() * muleDevices.length)];
-          payload = {
-            event_id: `burst_${burstId}_${i}_${Math.random().toString(36).slice(2, 6)}`,
-            amount: 300 + Math.random() * 800,
-            instrument: { method: "upi", vpa: `mule.burst${Math.floor(Math.random() * 40)}@ybl`, card_fingerprint: `FP-BURST-${Math.floor(Math.random() * 12)}` },
+        payload = {
+          event_id: `burst_${burstId}_${i}_${Math.random().toString(36).slice(2, 6)}`,
+          amount: 10 + Math.floor(Math.random() * 60000),
+          instrument: { method: "upi", vpa: `mule.burst${Math.floor(Math.random() * 40)}@ybl`, card_fingerprint: `FP-BURST-${Math.floor(Math.random() * 12)}` },
             customer: { id: `cust_burst_${dev}_${i}`, new_customer: true, account_age_days: 1 + Math.floor(Math.random() * 5), rto_rate_history: Math.random() * 0.1 },
             context: {
               device_id: dev,

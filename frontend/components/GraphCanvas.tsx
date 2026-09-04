@@ -45,7 +45,7 @@ function computeLayout(nodes: TopoNode[], edges: [string, string][]) {
     if (nd.id === hubId) {
       pos.set(nd.id, { x: W / 2, y: H / 2 });
     } else if (hubNeighbors.has(nd.id)) {
-      const idx = [...hubNeighbors].indexOf(nd.id);
+      const idx = Array.from(hubNeighbors).indexOf(nd.id);
       const total = hubNeighbors.size || 1;
       const angle = (idx / total) * Math.PI * 2 - Math.PI / 2;
       const rad = 140 + (i % 3) * 18 + Math.random() * 10;
