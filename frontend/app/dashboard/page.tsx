@@ -12,7 +12,8 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
-import { useLedgerStats, useModelReport } from "@/hooks/useApi";
+import { useEffect } from "react";
+import { useLedger, useLedgerStats, useModelReport } from "@/hooks/useApi";
 import { useLiveFeed } from "@/hooks/useLiveFeed";
 import ErrorState from "@/components/ui/ErrorState";
 import Loader from "@/components/ui/Loader";
@@ -29,13 +30,27 @@ function Kpi({ label, value, tone }: { label: string; value: string; tone?: stri
   );
 }
 
-const PIE_COLORS = ["var(--color-risk-low)", "var(--color-entity-vpa)", "var(--color-danger)", "var(--color-text-muted)"];
+const PIE_COLORS: Record<string, string> = {
+  HIGH: "var(--color-danger)",
+  MEDIUM: "var(--color-gold-500)",
+  LOW: "var(--color-risk-low)",
+};
 
 export default function DashboardOverview() {
   const { data: model, isLoading: mLoading, isError: mError, error: mErr, refetch: refetchModel } = useModelReport();
   const { data: ledger, isLoading: lLoading, isError: lError, error: lErr, refetch: refetchLedger } = useLedgerStats();
+  const { data: recentLedger, refetch: refetchRecent } = useLedger(100);
   const { alerts, connected } = useLiveFeed();
   const latest = alerts[0];
+
+  // Fully sync charts to live feed: refetch ledger/model when a new alert arrives
+  useEffect(() => {
+    if (alerts.length > 0) {
+      refetchLedger();
+      refetchRecent();
+      refetchModel();
+    }
+  }, [alerts.length, refetchLedger, refetchRecent, refetchModel]);
 
   const auprc = model?.auprc ?? model?.auc_roc ?? 0;
   const ceiling = model?.bayes_ceiling_auprc ?? 0;
@@ -51,15 +66,25 @@ export default function DashboardOverview() {
 
   const totalEntries = ledger?.entries ?? ledger?.total_entries ?? 0;
   const chainVerified = ledger?.chain_verified ?? ledger?.integrity_ok ?? true;
-  const debited = ledger?.debited ?? Math.floor(totalEntries / 2);
-  const credited = ledger?.credited ?? Math.ceil(totalEntries / 2);
-  const disputed = ledger?.disputed ?? 0;
 
-  const pieData = [
-    { name: "Credited", value: credited || 1 },
-    { name: "Debited", value: debited || 1 },
-    { name: "Disputed", value: disputed || 0 },
-  ];
+  // Live Ledger Flow derived from recent 100 ledger entries' risk bands — updates with every transaction
+  const bandCounts = { HIGH: 0, MEDIUM: 0, LOW: 0 } as Record<string, number>;
+  (recentLedger ?? []).forEach((e: { band?: string }) => {
+    const b = (e.band ?? "LOW").toUpperCase();
+    if (b in bandCounts) bandCounts[b] += 1;
+  });
+  const hasLiveBands = (recentLedger?.length ?? 0) > 0;
+  const pieData = hasLiveBands
+    ? [
+        { name: "HIGH", value: bandCounts.HIGH || 0 },
+        { name: "MEDIUM", value: bandCounts.MEDIUM || 0 },
+        { name: "LOW", value: bandCounts.LOW || 0 },
+      ].filter((d) => d.value > 0)
+    : [
+        { name: "Credited", value: 1 },
+        { name: "Debited", value: 1 },
+      ];
+  const pieColors = hasLiveBands ? pieData.map((d) => PIE_COLORS[d.name] ?? "var(--color-text-muted)") : ["var(--color-risk-low)", "var(--color-entity-vpa)"];
 
   return (
     <div className="flex flex-col gap-6">
@@ -78,7 +103,7 @@ export default function DashboardOverview() {
         <ErrorState
           title="Couldn't load overview"
           message={String((mErr as Error)?.message || (lErr as Error)?.message || "Risk engine unreachable — check API connectivity")}
-          onRetry={() => { refetchModel(); refetchLedger(); }}
+          onRetry={() => { refetchModel(); refetchLedger(); refetchRecent(); }}
         />
       ) : mLoading || lLoading ? (
         <div className="relative h-64"><Loader center /></div>
@@ -118,12 +143,15 @@ export default function DashboardOverview() {
             </div>
 
             <div className="glass p-5">
-              <h2 className="mb-3 font-sans text-sm font-semibold tracking-widest text-text-muted">LEDGER FLOW</h2>
+              <div className="mb-3 flex items-center justify-between">
+                <h2 className="font-sans text-sm font-semibold tracking-widest text-text-muted">LEDGER FLOW</h2>
+                <span className="font-mono text-[10px] text-text-muted">{hasLiveBands ? "LIVE risk bands (last 100)" : "LIVE"}</span>
+              </div>
               <ResponsiveContainer width="100%" height={220}>
                 <PieChart>
                   <Pie data={pieData} dataKey="value" nameKey="name" innerRadius={50} outerRadius={90} paddingAngle={3}>
-                    {pieData.map((_, i) => (
-                      <Cell key={i} fill={PIE_COLORS[i % PIE_COLORS.length]} />
+                    {pieData.map((entry, i) => (
+                      <Cell key={i} fill={pieColors[i] ?? "var(--color-text-muted)"} />
                     ))}
                   </Pie>
                   <Tooltip
@@ -139,6 +167,13 @@ export default function DashboardOverview() {
                   />
                 </PieChart>
               </ResponsiveContainer>
+              {hasLiveBands && (
+                <div className="mt-2 flex flex-wrap gap-3 font-mono text-[10px] text-text-secondary">
+                  <span className="flex items-center gap-1.5"><span className="h-2 w-2 rounded-full" style={{ background: PIE_COLORS.HIGH }} />HIGH {bandCounts.HIGH}</span>
+                  <span className="flex items-center gap-1.5"><span className="h-2 w-2 rounded-full" style={{ background: PIE_COLORS.MEDIUM }} />MED {bandCounts.MEDIUM}</span>
+                  <span className="flex items-center gap-1.5"><span className="h-2 w-2 rounded-full" style={{ background: PIE_COLORS.LOW }} />LOW {bandCounts.LOW}</span>
+                </div>
+              )}
             </div>
           </div>
           <div className="rounded-md border border-risk-high/30 bg-risk-high/10 p-3 font-mono text-[11px] leading-relaxed text-text-secondary">

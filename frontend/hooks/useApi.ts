@@ -34,6 +34,8 @@ export function useEvaluate() {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: queryKeys.ledgerStats });
       qc.invalidateQueries({ queryKey: queryKeys.ledger() });
+      qc.invalidateQueries({ queryKey: queryKeys.modelReport });
+      qc.invalidateQueries({ queryKey: queryKeys.topology() });
     },
   });
 }
@@ -54,6 +56,8 @@ export function useModelReport() {
     queryKey: queryKeys.modelReport,
     queryFn: fetchModelReport,
     retry: 1,
+    refetchInterval: 8000,
+    refetchOnWindowFocus: true,
   });
 }
 
@@ -63,6 +67,8 @@ export function useLedgerStats() {
     queryKey: queryKeys.ledgerStats,
     queryFn: fetchLedgerStats,
     retry: 1,
+    refetchInterval: 3000,
+    refetchOnWindowFocus: true,
   });
 }
 
@@ -72,6 +78,8 @@ export function useLedger(limit = 100) {
     queryKey: queryKeys.ledger(limit),
     queryFn: () => fetchLedger(limit),
     retry: 1,
+    refetchInterval: 3000,
+    refetchOnWindowFocus: true,
   });
 }
 
