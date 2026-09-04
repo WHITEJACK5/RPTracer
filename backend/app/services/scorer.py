@@ -240,11 +240,11 @@ async def run_pipeline(event: TransactionEvent,
         counts = get_review_queue().count_by_status()
         review_queue_size.set(counts.get("pending_review", 0))
 
-    # Phase 7: Enriched audit ledger — includes feature vector, model version, degraded flag
+    # Phase 7: Enriched audit ledger — amount is transaction amount (fix: was risk_score)
     audit_hash = get_ledger().append(
         debit_account=f"risk_engine::{event.event_id}",
         credit_account="merchant_protection",
-        amount=float(score),
+        amount=float(event.amount),
         refs={"event_id": event.event_id, "decision": evaluation.decision.value,
               "band": decision_band, "model": model.version(),
               "degraded": model.is_degraded,
