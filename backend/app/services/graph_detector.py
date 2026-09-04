@@ -285,10 +285,27 @@ class MuleDetector:
         src = self._resolve_center(center) if center else None
         if src is None:
             candidates = self._last_entities or list(self.g.nodes)
-            src = next((n for n in candidates
+            # Prefer most-recent high-degree entity (reverse order = most recent first)
+            src = next((n for n in reversed(candidates)
                         if self.g.has_node(n) and self.g.degree(n) >= 3), None)
-            if src is None and candidates:
-                src = next(n for n in candidates if self.g.has_node(n))
+            # If no high-degree in last entities, or chosen is not a ring, search globally for best ring
+            needs_better = src is None or (self.g.has_node(src) and self._fan_out(src) < 4 and not self.g.nodes[src].get("mule"))
+            if needs_better:
+                best = None
+                best_score = -1
+                for n in reversed(list(self._access.keys())):
+                    if not self.g.has_node(n) or self.g.nodes[n].get("type") != "device":
+                        continue
+                    fan = self._fan_out(n)
+                    mule_neighbors = sum(1 for nb in self.g.neighbors(n) if self.g.nodes[nb].get("mule"))
+                    score = fan * 10 + mule_neighbors * 5 + self.g.degree(n)
+                    if fan >= 4 and score > best_score:
+                        best = n
+                        best_score = score
+                if best is not None:
+                    src = best
+                elif src is None and candidates:
+                    src = next((n for n in reversed(candidates) if self.g.has_node(n)), None)
         if src is None:
             return {"nodes": [], "edges": []}
 

@@ -25,7 +25,7 @@ export default function GraphPage() {
   const [active, setActive] = useState<string | null>(null);
   const [refresh, setRefresh] = useState(0);
 
-  const center = override || active || "";
+  const center = (override || active || undefined) as string | undefined;
 
   return (
     <div className="flex flex-col gap-6">
@@ -63,18 +63,7 @@ export default function GraphPage() {
         </Button>
       </div>
 
-      {!center ? (
-        <div className="grid min-h-[460px] place-items-center rounded-md border border-border bg-surface text-center">
-          <div>
-            <p className="text-sm font-medium text-text-primary">No ring activity observed yet</p>
-            <p className="mt-1 text-sm text-text-secondary">
-              Run a preset from the dashboard sandbox to populate the live graph.
-            </p>
-          </div>
-        </div>
-      ) : (
-        <GraphCanvas key={refresh} center={center} refreshToken={refresh} />
-      )}
+      <GraphCanvas key={refresh} center={center} refreshToken={refresh} />
     </div>
   );
 }

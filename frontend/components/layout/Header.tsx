@@ -1,6 +1,7 @@
 ﻿"use client";
 
 import { useEffect, useRef, useState } from "react";
+import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { X } from "lucide-react";
@@ -57,13 +58,8 @@ export default function Header({
     <>
       <header className="sticky top-0 z-40 border-b border-border bg-bg-primary/70 backdrop-blur-2xl">
         <div className="mx-auto flex h-16 max-w-[1500px] items-center gap-5 px-5">
-          <Link href="/" className="flex items-center gap-3">
-            <svg width="32" height="32" viewBox="0 0 40 40" fill="none" aria-hidden>
-              <circle cx="20" cy="20" r="17.5" stroke="var(--color-accent)" strokeWidth="1.6" />
-              <circle cx="20" cy="20" r="10.5" stroke="var(--color-accent)" strokeOpacity="0.5" strokeWidth="1.3" />
-              <circle cx="20" cy="20" r="3.4" fill="var(--color-accent)" />
-              <line x1="20" y1="20" x2="33.5" y2="9.5" stroke="var(--color-accent)" strokeWidth="1.8" strokeLinecap="round" />
-            </svg>
+          <Link href="/" className="flex items-center gap-1.5">
+            <Image src="/logo.png" alt="TRACER logo" width={48} height={48} className="h-12 w-12 object-contain" priority />
             <span className="font-sans text-xl font-bold tracking-tight text-gradient">TRACER</span>
           </Link>
 
