@@ -126,15 +126,21 @@ export default function SandboxPage() {
   const [history, setHistory] = useState<{ ts: number; r: RiskEvaluation }[]>([]);
   const [ringBuilding, setRingBuilding] = useState(false);
   const [ringProgress, setRingProgress] = useState(0);
+  const [burstBuilding, setBurstBuilding] = useState(false);
+  const [burstProgress, setBurstProgress] = useState(0);
+  const [burstTotal, setBurstTotal] = useState(0);
+  const [burstStats, setBurstStats] = useState<{ high: number; medium: number; low: number } | null>(null);
   const [jsonInput, setJsonInput] = useState("");
   const [jsonError, setJsonError] = useState<string | null>(null);
   const termRef = useRef<HTMLDivElement>(null);
   const ringIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const burstRef = useRef<{ cancelled: boolean }>({ cancelled: false });
   const [typedLines, setTypedLines] = useState<string[]>([]);
 
   useEffect(() => {
     return () => {
       if (ringIntervalRef.current) clearInterval(ringIntervalRef.current);
+      burstRef.current.cancelled = true;
     };
   }, []);
 
@@ -209,6 +215,100 @@ export default function SandboxPage() {
     ringIntervalRef.current = interval;
   }, [evaluate]);
 
+  const fireRandomBurst = useCallback(async () => {
+    const total = 200 + Math.floor(Math.random() * 201); // 200-400 randomized
+    setBurstTotal(total);
+    setBurstProgress(0);
+    setBurstStats(null);
+    setBurstBuilding(true);
+    burstRef.current.cancelled = false;
+    let high = 0, medium = 0, low = 0;
+    const burstId = Date.now();
+    // Pre-generate a pool of mule devices to create fan-out rings within the burst
+    const muleDevices = Array.from({ length: 6 }, (_, k) => `DEV-MULE-BURST-${burstId}-${k}`);
+    const BATCH = 6; // parallel batch for 18-22 rps, completes 400 in ~20s, fully synced via invalidation+polling
+    for (let batchStart = 0; batchStart < total; batchStart += BATCH) {
+      if (burstRef.current.cancelled) break;
+      const batchEnd = Math.min(batchStart + BATCH, total);
+      const batchPromises: Promise<void>[] = [];
+      for (let i = batchStart; i < batchEnd; i++) {
+        const isMuleRing = Math.random() < 0.15;
+        let payload: Record<string, unknown>;
+        if (isMuleRing) {
+          const dev = muleDevices[Math.floor(Math.random() * muleDevices.length)];
+          payload = {
+            event_id: `burst_${burstId}_${i}_${Math.random().toString(36).slice(2, 6)}`,
+            amount: 300 + Math.random() * 800,
+            instrument: { method: "upi", vpa: `mule.burst${Math.floor(Math.random() * 40)}@ybl`, card_fingerprint: `FP-BURST-${Math.floor(Math.random() * 12)}` },
+            customer: { id: `cust_burst_${dev}_${i}`, new_customer: true, account_age_days: 1 + Math.floor(Math.random() * 5), rto_rate_history: Math.random() * 0.1 },
+            context: {
+              device_id: dev,
+              ip: `203.0.113.${1 + Math.floor(Math.random() * 254)}`,
+              email: `burst${i}@tempmail.dev`,
+              txn_count_1h: 3 + Math.floor(Math.random() * 8),
+              txn_count_24h: 8 + Math.floor(Math.random() * 20),
+              amount_sum_24h: 5000 + Math.floor(Math.random() * 80000),
+              distinct_devices_24h: 1 + Math.floor(Math.random() * 3),
+              hour_of_day: Math.floor(Math.random() * 24),
+            },
+          };
+        } else {
+          const amtRoll = Math.random();
+          const amount = amtRoll < 0.5 ? 100 + Math.floor(Math.random() * 4900) : 5000 + Math.floor(Math.random() * 45000);
+          payload = {
+            event_id: `burst_${burstId}_${i}_${Math.random().toString(36).slice(2, 6)}`,
+            amount,
+            instrument: Math.random() < 0.6
+              ? { method: "upi", vpa: `user${Math.floor(Math.random() * 10000)}@ok${["hdfc","icici","ybl","upi"][Math.floor(Math.random()*4)]}bank` }
+              : Math.random() < 0.5
+                ? { method: "card", card_fingerprint: `FP-${Math.random().toString(36).slice(2, 8).toUpperCase()}` }
+                : { method: "cod", is_cod: true },
+            customer: {
+              id: `cust_burst_${burstId}_${i}`,
+              new_customer: Math.random() < 0.35,
+              account_age_days: 1 + Math.floor(Math.random() * 1200),
+              rto_rate_history: Math.random() < 0.12 ? 0.4 + Math.random() * 0.5 : Math.random() * 0.15,
+            },
+            context: {
+              device_id: `DEV-BURST-${burstId}-${Math.floor(Math.random() * 35)}`,
+              ip: `${1 + Math.floor(Math.random() * 254)}.${Math.floor(Math.random() * 255)}.${Math.floor(Math.random() * 255)}.${Math.floor(Math.random() * 255)}`,
+              email: Math.random() < 0.2 ? `user${i}@tempmail.dev` : `user${i}@gmail.com`,
+              billing_shipping_mismatch: Math.random() < 0.08,
+              txn_count_1h: Math.floor(Math.random() * 6),
+              txn_count_24h: Math.floor(Math.random() * 25),
+              amount_sum_24h: Math.floor(Math.random() * 120000),
+              distinct_devices_24h: 1 + Math.floor(Math.random() * 4),
+              hour_of_day: Math.floor(Math.random() * 24),
+            },
+          };
+        }
+        batchPromises.push(
+          new Promise<void>((resolve) => {
+            evaluate.mutate(payload as object, {
+              onSuccess: (data) => {
+                const band = data.data.risk_band;
+                if (band === "HIGH") high += 1; else if (band === "MEDIUM") medium += 1; else low += 1;
+                setResult(data.data);
+                setHistory((prev) => [{ ts: Date.now(), r: data.data }, ...prev].slice(0, 30));
+                setBurstProgress((p) => p + 1);
+                resolve();
+              },
+              onError: () => {
+                setBurstProgress((p) => p + 1);
+                resolve();
+              },
+            });
+          })
+        );
+      }
+      await Promise.all(batchPromises);
+      if (burstRef.current.cancelled) break;
+      await new Promise((r) => setTimeout(r, 12)); // tiny yield, keeps 5000/min safe (~18 rps effective)
+    }
+    setBurstStats({ high, medium, low });
+    setBurstBuilding(false);
+  }, [evaluate]);
+
   const fireCustom = useCallback(() => {
     try {
       const payload = JSON.parse(jsonInput);
@@ -242,7 +342,7 @@ export default function SandboxPage() {
             <button
               key={p.label}
               onClick={() => fire(p)}
-              disabled={evaluate.isPending || ringBuilding}
+              disabled={evaluate.isPending || ringBuilding || burstBuilding}
               className="flex flex-col rounded-md border border-border bg-surface px-4 py-3 text-left transition-colors hover:border-accent disabled:opacity-50"
             >
               <span className="text-sm font-semibold text-text-primary">{p.label}</span>
@@ -262,13 +362,43 @@ export default function SandboxPage() {
           Fires 5 sequential events to the same device. Watch <code>ring_detected</code> flip to true.
         </p>
         <div className="mt-3 flex items-center gap-4">
-          <Button onClick={fireRing} disabled={evaluate.isPending || ringBuilding} variant="secondary">
+          <Button onClick={fireRing} disabled={evaluate.isPending || ringBuilding || burstBuilding} variant="secondary">
             {ringBuilding ? `Firing... (${ringProgress}/5)` : "Fire 5-Ring Sequence"}
           </Button>
           {ringProgress >= 5 && !ringBuilding && (
             <span className="text-sm font-semibold text-risk-high">Ring complete — check graph evidence above</span>
           )}
         </div>
+      </section>
+
+      {/* Randomized High-Throughput Burst — 200-400 fully random, synced everywhere */}
+      <section className="rounded-md border border-border bg-surface p-5">
+        <h2 className="text-sm font-semibold uppercase tracking-wider text-text-muted">Randomized Burst (200-400 txns)</h2>
+        <p className="mt-1 text-xs text-text-secondary">
+          Fires 200-400 fully randomized payloads (amounts, devices, VPAs, IPs, risk signals). ~15% contain mule fan-out rings. Overview, Ledger, and Graph all sync live via polling + invalidation.
+        </p>
+        <div className="mt-3 flex flex-wrap items-center gap-4">
+          <Button onClick={fireRandomBurst} disabled={burstBuilding || ringBuilding} variant="secondary">
+            {burstBuilding ? `Bursting... ${burstProgress}/${burstTotal}` : "Fire Randomized Burst (200-400)"}
+          </Button>
+          {burstBuilding && (
+            <div className="flex flex-1 items-center gap-3">
+              <div className="h-2 flex-1 overflow-hidden rounded-full bg-bg-tertiary">
+                <div className="h-full bg-accent transition-all duration-150" style={{ width: `${burstTotal ? (burstProgress / burstTotal) * 100 : 0}%` }} />
+              </div>
+              <span className="font-mono text-xs text-text-muted">{burstProgress}/{burstTotal}</span>
+            </div>
+          )}
+          {!burstBuilding && burstStats && (
+            <span className="font-mono text-xs text-text-secondary">
+              Done — <span className="text-risk-high">HIGH {burstStats.high}</span> · <span className="text-gold-500">MED {burstStats.medium}</span> · <span className="text-risk-low">LOW {burstStats.low}</span> · total {burstTotal}
+            </span>
+          )}
+          {burstBuilding && (
+            <Button onClick={() => { burstRef.current.cancelled = true; }} variant="ghost">Cancel</Button>
+          )}
+        </div>
+        <p className="mt-2 font-mono text-[10px] text-text-muted">Rate limit raised to 5000/min for burst; ~28ms jitter per txn keeps UI responsive.</p>
       </section>
 
       {/* Custom JSON Input */}

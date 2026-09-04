@@ -27,8 +27,10 @@ METRIC_REVIEW_QUEUE = "tracer_review_queue_size"
 SCORING_LATENCY_BUCKETS = (0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1.0, 2.5, 5.0)
 
 # --- Default per-client rate limits (requests / minute) ----------------------
-DEFAULT_IP_LIMIT_PER_MIN = 100
-DEFAULT_MERCHANT_LIMIT_PER_MIN = 1000
+# Raised for high-throughput demo bursts (200-400 randomized txns) — still safe for single-process
+# Production would front with Redis; bench uses RATE_LIMIT_IP_PER_MIN=99999
+DEFAULT_IP_LIMIT_PER_MIN = 5000
+DEFAULT_MERCHANT_LIMIT_PER_MIN = 20000
 
 # --- Idempotency / cache defaults -------------------------------------------
 DEFAULT_IDEMPOTENCY_TTL_SECONDS = 600
