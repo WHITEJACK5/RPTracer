@@ -59,7 +59,7 @@ export default function Header({
       <header className="sticky top-0 z-40 border-b border-border bg-bg-primary/70 backdrop-blur-2xl">
         <div className="mx-auto flex h-16 max-w-[1500px] items-center gap-5 px-5">
           <Link href="/" className="flex items-center gap-1.5">
-            <Image src="/logo.png" alt="TRACER logo" width={48} height={48} className="h-12 w-12 object-contain" priority />
+            <Image src="/logo.png" alt="TRACER logo" width={56} height={56} className="h-14 w-14 object-contain" priority />
             <span className="font-sans text-xl font-bold tracking-tight text-gradient">TRACER</span>
           </Link>
 
