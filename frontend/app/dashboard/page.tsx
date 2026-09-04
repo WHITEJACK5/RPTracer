@@ -117,7 +117,7 @@ export default function DashboardOverview() {
           </div>
 
           <div className="grid gap-4 lg:grid-cols-2">
-            <div className="glass p-5">
+            <div className="glass flex flex-col p-5">
               <h2 className="mb-3 font-sans text-sm font-semibold tracking-widest text-text-muted">MODEL QUALITY (HOLD-OUT)</h2>
               <ResponsiveContainer width="100%" height={220}>
                 <BarChart data={modelMetrics} margin={{ top: 8, right: 8, left: -18, bottom: 0 }}>
@@ -140,9 +140,18 @@ export default function DashboardOverview() {
                   </Bar>
                 </BarChart>
               </ResponsiveContainer>
+              <div className="mt-3 flex justify-end">
+                <button
+                  onClick={() => refetchModel()}
+                  disabled={mLoading}
+                  className="inline-flex items-center gap-1.5 rounded-md border border-border bg-bg-tertiary px-3 py-1.5 font-mono text-xs font-medium text-text-secondary transition-colors hover:border-accent hover:text-accent disabled:opacity-50"
+                >
+                  <span className={`h-3 w-3 ${mLoading ? "animate-spin" : ""}`}>↻</span> Refresh graph
+                </button>
+              </div>
             </div>
 
-            <div className="glass p-5">
+            <div className="glass flex flex-col p-5">
               <div className="mb-3 flex items-center justify-between">
                 <h2 className="font-sans text-sm font-semibold tracking-widest text-text-muted">LEDGER FLOW</h2>
                 <span className="font-mono text-[10px] text-text-muted">{hasLiveBands ? "LIVE risk bands (last 100)" : "LIVE"}</span>
@@ -174,6 +183,15 @@ export default function DashboardOverview() {
                   <span className="flex items-center gap-1.5"><span className="h-2 w-2 rounded-full" style={{ background: PIE_COLORS.LOW }} />LOW {bandCounts.LOW}</span>
                 </div>
               )}
+              <div className="mt-3 flex justify-end">
+                <button
+                  onClick={() => { refetchLedger(); refetchRecent(); }}
+                  disabled={lLoading}
+                  className="inline-flex items-center gap-1.5 rounded-md border border-border bg-bg-tertiary px-3 py-1.5 font-mono text-xs font-medium text-text-secondary transition-colors hover:border-accent hover:text-accent disabled:opacity-50"
+                >
+                  <span className={`h-3 w-3 ${lLoading ? "animate-spin" : ""}`}>↻</span> Refresh pie
+                </button>
+              </div>
             </div>
           </div>
           <div className="rounded-md border border-risk-high/30 bg-risk-high/10 p-3 font-mono text-[11px] leading-relaxed text-text-secondary">
