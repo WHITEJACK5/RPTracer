@@ -13,13 +13,16 @@ import {
   YAxis,
 } from "recharts";
 import { useEffect } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { useLedger, useLedgerStats, useModelReport } from "@/hooks/useApi";
+import { queryKeys } from "@/hooks/useApi";
 import { useLiveFeed } from "@/hooks/useLiveFeed";
 import ErrorState from "@/components/ui/ErrorState";
 import Loader from "@/components/ui/Loader";
 import StreamingText from "@/components/ui/StreamingText";
 import LogPanel from "@/components/ui/LogPanel";
 import { cn } from "@/lib/utils";
+import { toast } from "sonner";
 
 function Kpi({ label, value, tone }: { label: string; value: string; tone?: string }) {
   return (
@@ -37,9 +40,10 @@ const PIE_COLORS: Record<string, string> = {
 };
 
 export default function DashboardOverview() {
-  const { data: model, isLoading: mLoading, isError: mError, error: mErr, refetch: refetchModel } = useModelReport();
-  const { data: ledger, isLoading: lLoading, isError: lError, error: lErr, refetch: refetchLedger } = useLedgerStats();
-  const { data: recentLedger, refetch: refetchRecent } = useLedger(100);
+  const qc = useQueryClient();
+  const { data: model, isLoading: mLoading, isFetching: mFetching, isError: mError, error: mErr, refetch: refetchModel } = useModelReport() as ReturnType<typeof useModelReport> & { isFetching: boolean };
+  const { data: ledger, isLoading: lLoading, isFetching: lFetching, isError: lError, error: lErr, refetch: refetchLedger } = useLedgerStats() as ReturnType<typeof useLedgerStats> & { isFetching: boolean };
+  const { data: recentLedger, isFetching: rFetching, refetch: refetchRecent } = useLedger(100) as ReturnType<typeof useLedger> & { isFetching: boolean };
   const { alerts, connected } = useLiveFeed();
   const latest = alerts[0];
 
@@ -142,11 +146,16 @@ export default function DashboardOverview() {
               </ResponsiveContainer>
               <div className="mt-3 flex justify-end">
                 <button
-                  onClick={() => refetchModel()}
-                  disabled={mLoading}
+                  onClick={async () => {
+                    toast.info("Refreshing Model Quality…");
+                    await qc.invalidateQueries({ queryKey: queryKeys.modelReport });
+                    const r = await refetchModel();
+                    if (r.data) toast.success("Model Quality refreshed", { description: `AUPRC ${Number(r.data.auprc ?? r.data.auc_roc ?? 0).toFixed(3)}` });
+                  }}
+                  disabled={mFetching}
                   className="inline-flex items-center gap-1.5 rounded-md border border-border bg-bg-tertiary px-3 py-1.5 font-mono text-xs font-medium text-text-secondary transition-colors hover:border-accent hover:text-accent disabled:opacity-50"
                 >
-                  <span className={`h-3 w-3 ${mLoading ? "animate-spin" : ""}`}>↻</span> Refresh graph
+                  <span className={`inline-block h-3 w-3 ${mFetching ? "animate-spin" : ""}`}>↻</span> Refresh graph
                 </button>
               </div>
             </div>
@@ -185,11 +194,20 @@ export default function DashboardOverview() {
               )}
               <div className="mt-3 flex justify-end">
                 <button
-                  onClick={() => { refetchLedger(); refetchRecent(); }}
-                  disabled={lLoading}
+                  onClick={async () => {
+                    toast.info("Refreshing Ledger Flow…");
+                    await Promise.all([
+                      qc.invalidateQueries({ queryKey: queryKeys.ledgerStats }),
+                      qc.invalidateQueries({ queryKey: queryKeys.ledger(100) }),
+                    ]);
+                    const [s, r] = await Promise.all([refetchLedger(), refetchRecent()]);
+                    const total = (s.data as unknown as { entries?: number })?.entries ?? 0;
+                    toast.success("Ledger Flow refreshed", { description: `${total} entries · ${(r.data as unknown[])?.length ?? 0} recent` });
+                  }}
+                  disabled={lFetching || rFetching}
                   className="inline-flex items-center gap-1.5 rounded-md border border-border bg-bg-tertiary px-3 py-1.5 font-mono text-xs font-medium text-text-secondary transition-colors hover:border-accent hover:text-accent disabled:opacity-50"
                 >
-                  <span className={`h-3 w-3 ${lLoading ? "animate-spin" : ""}`}>↻</span> Refresh pie
+                  <span className={`inline-block h-3 w-3 ${(lFetching || rFetching) ? "animate-spin" : ""}`}>↻</span> Refresh pie
                 </button>
               </div>
             </div>
