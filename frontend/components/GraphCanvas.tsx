@@ -213,6 +213,13 @@ export default function GraphCanvas({ center, refreshToken }: { center?: string 
       </div>
 
       <div className="relative overflow-hidden rounded-md border border-border bg-bg-primary/40" style={{ cursor: isDragging ? "grabbing" : "grab" }}>
+        <button
+          onClick={() => setRetryTick((t) => t + 1)}
+          className="absolute bottom-3 right-3 z-10 inline-flex items-center gap-1.5 rounded-md border border-border bg-bg-secondary/90 px-3 py-1.5 font-mono text-xs font-medium text-text-secondary shadow backdrop-blur hover:border-accent hover:text-accent"
+          aria-label="Refresh graph"
+        >
+          <span className="text-[11px]">↻</span> Refresh
+        </button>
         {error ? (
           <div className="flex h-[520px] flex-col items-center justify-center gap-3">
             <p className="font-mono text-xs text-danger">graph engine unreachable — {error}</p>

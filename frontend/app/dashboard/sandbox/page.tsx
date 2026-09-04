@@ -312,7 +312,13 @@ export default function SandboxPage() {
     }
     setBurstStats({ high, medium, low });
     setBurstBuilding(false);
-    // Final sync
+    // Persist session for per-session graph
+    try {
+      const sessions = JSON.parse(localStorage.getItem("tracer.burstSessions") || "[]");
+      sessions.unshift({ id: String(burstId), ts: Date.now(), total, high, medium, low, muleDevices });
+      localStorage.setItem("tracer.burstSessions", JSON.stringify(sessions.slice(0, 12)));
+    } catch {}
+    // Final sync system-wide
     qc.invalidateQueries({ queryKey: queryKeys.ledgerStats });
     qc.invalidateQueries({ queryKey: queryKeys.ledger() });
     qc.invalidateQueries({ queryKey: queryKeys.topology() });
