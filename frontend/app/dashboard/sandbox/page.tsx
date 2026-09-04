@@ -236,7 +236,7 @@ export default function SandboxPage() {
       const batchEnd = Math.min(batchStart + BATCH, total);
       const batchPromises: Promise<void>[] = [];
       for (let i = batchStart; i < batchEnd; i++) {
-        const isMuleRing = Math.random() < 0.15;
+        const isMuleRing = Math.random() < 0.10;
         let payload: Record<string, unknown>;
         if (isMuleRing) {
           const dev = muleDevices[Math.floor(Math.random() * muleDevices.length)];
@@ -267,23 +267,23 @@ export default function SandboxPage() {
               : Math.random() < 0.5
                 ? { method: "card", card_fingerprint: `FP-${Math.random().toString(36).slice(2, 8).toUpperCase()}` }
                 : { method: "cod", is_cod: true },
-            customer: {
-              id: `cust_burst_${burstId}_${i}`,
-              new_customer: Math.random() < 0.35,
-              account_age_days: 1 + Math.floor(Math.random() * 1200),
-              rto_rate_history: Math.random() < 0.12 ? 0.4 + Math.random() * 0.5 : Math.random() * 0.15,
-            },
-            context: {
-              device_id: `DEV-BURST-${burstId}-${Math.floor(Math.random() * 35)}`,
-              ip: `${1 + Math.floor(Math.random() * 254)}.${Math.floor(Math.random() * 255)}.${Math.floor(Math.random() * 255)}.${Math.floor(Math.random() * 255)}`,
-              email: Math.random() < 0.2 ? `user${i}@tempmail.dev` : `user${i}@gmail.com`,
-              billing_shipping_mismatch: Math.random() < 0.08,
-              txn_count_1h: Math.floor(Math.random() * 6),
-              txn_count_24h: Math.floor(Math.random() * 25),
-              amount_sum_24h: Math.floor(Math.random() * 120000),
-              distinct_devices_24h: 1 + Math.floor(Math.random() * 4),
-              hour_of_day: Math.floor(Math.random() * 24),
-            },
+          customer: {
+            id: `cust_burst_${burstId}_${i}`,
+            new_customer: Math.random() < 0.18,
+            account_age_days: 120 + Math.floor(Math.random() * 1100),
+            rto_rate_history: Math.random() < 0.06 ? 0.4 + Math.random() * 0.5 : Math.random() * 0.08,
+          },
+          context: {
+            device_id: `DEV-BURST-${burstId}-${i}`,
+            ip: `10.${burstId % 255}.${Math.floor(i / 255)}.${i % 255}`,
+            email: Math.random() < 0.08 ? `user${i}@tempmail.dev` : `user${i}@gmail.com`,
+            billing_shipping_mismatch: Math.random() < 0.04,
+            txn_count_1h: Math.floor(Math.random() * 2),
+            txn_count_24h: Math.floor(Math.random() * 4),
+            amount_sum_24h: Math.floor(Math.random() * 18000),
+            distinct_devices_24h: 1,
+            hour_of_day: 10 + Math.floor(Math.random() * 8),
+          },
           };
         }
         batchPromises.push(
