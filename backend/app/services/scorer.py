@@ -197,6 +197,16 @@ async def run_pipeline(event: TransactionEvent,
     model = get_risk_model()
     proba = await run_in_threadpool(model.probability, feats)
     floor = await run_in_threadpool(policy_floor, feats, gs)
+    # Same-amount repeat pattern — amount-agnostic, purely repetition-driven (till 1000 range)
+    try:
+        from backend.app.services.amount_repeat import observe as _amt_repeat
+        rep = _amt_repeat(event.context.device_id, float(event.amount))
+        if rep.get("is_repeat_high"):
+            floor = max(floor, 88)
+        elif rep.get("is_repeat_medium"):
+            floor = max(floor, 65)
+    except Exception:
+        pass
 
     score = int(round(max(proba * 100.0, floor)))
     if force_high and not model.is_degraded:

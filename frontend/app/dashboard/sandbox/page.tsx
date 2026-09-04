@@ -230,20 +230,23 @@ export default function SandboxPage() {
     const burstId = Date.now();
     // Pre-generate a pool of mule devices to create fan-out rings within the burst
     const muleDevices = Array.from({ length: 6 }, (_, k) => `DEV-MULE-BURST-${burstId}-${k}`);
+    const muleAmounts: Record<string, number> = {};
+    muleDevices.forEach((d) => { muleAmounts[d] = 100 + Math.floor(Math.random() * 900); }); // fixed 100-1000 per mule device for same-amount repeat pattern
     const BATCH = 6; // parallel batch for 18-22 rps, completes 400 in ~20s, fully synced via invalidation+polling
     for (let batchStart = 0; batchStart < total; batchStart += BATCH) {
       if (burstRef.current.cancelled) break;
       const batchEnd = Math.min(batchStart + BATCH, total);
       const batchPromises: Promise<void>[] = [];
       for (let i = batchStart; i < batchEnd; i++) {
-        const isMuleRing = Math.random() < 0.10;
+        const isMuleRing = Math.random() < 0.12;
         let payload: Record<string, unknown>;
         if (isMuleRing) {
           const dev = muleDevices[Math.floor(Math.random() * muleDevices.length)];
-        payload = {
-          event_id: `burst_${burstId}_${i}_${Math.random().toString(36).slice(2, 6)}`,
-          amount: 10 + Math.floor(Math.random() * 60000),
-          instrument: { method: "upi", vpa: `mule.burst${Math.floor(Math.random() * 40)}@ybl`, card_fingerprint: `FP-BURST-${Math.floor(Math.random() * 12)}` },
+          const amt = muleAmounts[dev] + (Math.random() < 0.7 ? 0 : (Math.random() < 0.5 ? -3 : 3)); // same amount ±3 for range test
+          payload = {
+            event_id: `burst_${burstId}_${i}_${Math.random().toString(36).slice(2, 6)}`,
+            amount: Math.max(1, Math.round(amt)),
+            instrument: { method: "upi", vpa: `mule.burst${Math.floor(Math.random() * 40)}@ybl`, card_fingerprint: `FP-BURST-${Math.floor(Math.random() * 12)}` },
             customer: { id: `cust_burst_${dev}_${i}`, new_customer: true, account_age_days: 1 + Math.floor(Math.random() * 5), rto_rate_history: Math.random() * 0.1 },
             context: {
               device_id: dev,
@@ -257,8 +260,7 @@ export default function SandboxPage() {
             },
           };
         } else {
-          const amtRoll = Math.random();
-          const amount = amtRoll < 0.5 ? 100 + Math.floor(Math.random() * 4900) : 5000 + Math.floor(Math.random() * 45000);
+          const amount = 1 + Math.floor(Math.random() * 1000);
           payload = {
             event_id: `burst_${burstId}_${i}_${Math.random().toString(36).slice(2, 6)}`,
             amount,
