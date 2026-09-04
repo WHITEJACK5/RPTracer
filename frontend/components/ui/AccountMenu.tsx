@@ -66,13 +66,13 @@ export default function AccountMenu() {
 
   const items: Item[] = [
     { label: "Public profile", icon: User, href: "/dashboard/profile" },
-    { label: "Account", icon: Settings, href: "/dashboard/settings" },
+    { label: "Account", icon: Settings, href: "/dashboard/account" },
     {
       label: "Appearance",
       icon: Palette,
       onSelect: () => setTheme(resolvedTheme === "dark" ? "light" : "dark"),
     },
-    { label: "Accessibility", icon: Accessibility, href: "/dashboard/settings" },
+    { label: "Accessibility", icon: Accessibility, href: "/dashboard/accessibility" },
     { label: "Notifications", icon: Bell, onSelect: () => { setShowNotifications(true); setOpen(false); } },
   ];
 
