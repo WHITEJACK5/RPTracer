@@ -65,7 +65,7 @@ export default function AccountMenu() {
   const initials = profileName.split(" ").map((p) => p[0]).join("").slice(0, 2).toUpperCase() || "AR";
 
   const items: Item[] = [
-    { label: "Public profile", icon: User, onSelect: () => { setShowProfile(true); setOpen(false); } },
+    { label: "Public profile", icon: User, href: "/dashboard/profile" },
     { label: "Account", icon: Settings, href: "/dashboard/settings" },
     {
       label: "Appearance",
