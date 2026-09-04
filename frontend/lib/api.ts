@@ -8,13 +8,15 @@ import type {
   Topology,
 } from "./types";
 
-export const API_BASE =
-  (typeof window !== "undefined" && localStorage.getItem("tracer.apiBase")) ||
-  process.env.NEXT_PUBLIC_API_BASE ||
-  "http://127.0.0.1:8000";
+export function getApiBase(): string {
+  return (typeof window !== "undefined" && localStorage.getItem("tracer.apiBase")) ||
+    process.env.NEXT_PUBLIC_API_BASE ||
+    "http://127.0.0.1:8000";
+}
+export const API_BASE = getApiBase();
 
 async function http<T>(path: string, init?: RequestInit): Promise<T> {
-  const res = await fetch(`${API_BASE}${path}`, init);
+  const res = await fetch(`${getApiBase()}${path}`, init);
   const data = await res.json().catch(() => ({}));
   if (!res.ok) {
     throw new Error(String(data?.detail ?? `${res.status} ${res.statusText}`));
@@ -25,7 +27,7 @@ async function http<T>(path: string, init?: RequestInit): Promise<T> {
 export async function evaluateRisk(
   payload: object
 ): Promise<{ data: RiskEvaluation; replay: boolean }> {
-  const res = await fetch(`${API_BASE}/api/v1/risk/evaluate`, {
+  const res = await fetch(`${getApiBase()}/api/v1/risk/evaluate`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -48,8 +50,11 @@ export async function fetchPresets(): Promise<Record<string, Preset> | null> {
   }
 }
 
-export async function fetchTopology(center?: string): Promise<Topology> {
-  const q = center ? `?center=${encodeURIComponent(center)}` : "";
+export async function fetchTopology(center?: string, session?: string): Promise<Topology> {
+  const params = new URLSearchParams();
+  if (center) params.set("center", center);
+  if (session) params.set("session", session);
+  const q = params.toString() ? `?${params.toString()}` : "";
   return http<Topology>(`/api/v1/graph/topology${q}`);
 }
 
@@ -83,7 +88,7 @@ export async function fetchHealth(): Promise<{ status: string } | null> {
 
 /** Streaming live alerts — falls back to polling if SSE is unavailable. */
 export function alertStreamUrl(): string {
-  return `${API_BASE}/api/v1/stream/alerts`;
+  return `${getApiBase()}/api/v1/stream/alerts`;
 }
 
 export const BUNDLED_ANALYSTS: Analyst[] = [

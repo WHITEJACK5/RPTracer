@@ -4,10 +4,12 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useLedgerStats } from "@/hooks/useApi";
 import TextReveal from "@/components/ui/TextReveal";
+import Loader from "@/components/ui/Loader";
+import ErrorState from "@/components/ui/ErrorState";
 
 export default function ProfilePage() {
   const [email, setEmail] = useState("analyst@razorpay.com");
-  const { data: stats } = useLedgerStats();
+  const { data: stats, isLoading, isError, error, refetch } = useLedgerStats();
 
   useEffect(() => {
     try { setEmail(localStorage.getItem("tracer.session.email") || "analyst@razorpay.com"); } catch {}
@@ -45,11 +47,20 @@ export default function ProfilePage() {
               <p className="mt-2 font-sans text-base font-bold text-text-primary">Lead Analyst</p>
               <p className="font-mono text-xs text-text-muted">Full access · Ops</p>
             </div>
-            <div className="rounded-[var(--radius-md)] border border-border bg-bg-primary/60 p-4 text-center">
-              <p className="font-mono text-[11px] uppercase tracking-wider text-text-muted">Ledger Impact</p>
-              <p className="mt-2 font-mono text-xl font-bold text-accent">{stats?.entries?.toLocaleString() ?? "—"}</p>
-              <p className="font-mono text-xs text-text-muted">entries audited</p>
-            </div>
+            {isLoading ? (
+              <div className="flex items-center justify-center rounded-[var(--radius-md)] border border-border bg-bg-primary/60 p-4"><Loader size="sm" label="loading…" /></div>
+            ) : isError ? (
+              <div className="rounded-[var(--radius-md)] border border-border bg-bg-primary/60 p-4 text-center">
+                <p className="font-mono text-[11px] uppercase tracking-wider text-risk-high">Ledger Error</p>
+                <button onClick={() => refetch()} className="mt-2 font-mono text-xs text-accent hover:underline">Retry</button>
+              </div>
+            ) : (
+              <div className="rounded-[var(--radius-md)] border border-border bg-bg-primary/60 p-4 text-center">
+                <p className="font-mono text-[11px] uppercase tracking-wider text-text-muted">Ledger Impact</p>
+                <p className="mt-2 font-mono text-xl font-bold text-accent">{stats?.entries?.toLocaleString() ?? "—"}</p>
+                <p className="font-mono text-xs text-text-muted">entries audited</p>
+              </div>
+            )}
             <div className="rounded-[var(--radius-md)] border border-border bg-bg-primary/60 p-4 text-center">
               <p className="font-mono text-[11px] uppercase tracking-wider text-text-muted">Auth</p>
               <p className="mt-2 font-mono text-sm font-bold text-risk-low">Verified ✓</p>

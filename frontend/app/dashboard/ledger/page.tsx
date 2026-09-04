@@ -95,7 +95,9 @@ export default function LedgerPage() {
                 </tr>
               </thead>
               <tbody>
-                {safeRows.map((r) => (
+                {safeRows.length === 0 ? (
+                  <tr><td colSpan={8} className="px-5 py-12 text-center font-mono text-sm text-text-muted">No entries yet — fire a transaction in Sandbox to populate the ledger.</td></tr>
+                ) : safeRows.map((r) => (
                   <tr key={r.seq} className="border-t border-border hover:bg-bg-tertiary/40">
                     <td className="px-4 py-2.5 font-mono text-[12px] text-text-muted">{r.seq}</td>
                     <td className="px-3 py-2.5 font-mono text-[11px] text-text-muted">{r.ts_ms ? new Date(r.ts_ms).toLocaleTimeString() : "-"}</td>

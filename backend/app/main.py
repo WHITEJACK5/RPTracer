@@ -116,10 +116,10 @@ def create_app() -> FastAPI:
         openapi_url="/openapi.json" if docs_enabled else None,
     )
 
-    # --- CORS: explicit allow-list only (no '*') ----------------------------
+    # --- CORS: explicit allow-list, correct for credentials ----------------------------
     app.add_middleware(
         CORSMiddleware, allow_origins=CORS_ORIGINS, allow_credentials=True,
-        allow_methods=["GET", "POST"], allow_headers=["*"],
+        allow_methods=["GET", "POST", "OPTIONS"], allow_headers=["Content-Type", "Authorization", "X-Idempotency-Key", "X-Razorpay-Signature"],
     )
 
     # --- Security headers ---------------------------------------------------

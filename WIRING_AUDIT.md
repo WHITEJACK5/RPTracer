@@ -1,13 +1,13 @@
-# WIRING_AUDIT.md — TRACER Frontend Button/Link Audit (live snapshot 2026-08-28, commit b36e0d5 + audit fixes)
+# WIRING_AUDIT.md — TRACER Frontend Button/Link Audit (live snapshot 2026-09-04, commit 2730664 + full audit)
 
-Regenerated 2026-08-28 against current HEAD via `Select-String -Pattern "<a\s|<Link\s|onClick|href="`. Every target verified to exist and work (routes exist as `app/**/page.tsx`, handlers call live APIs or real navigation).
+Regenerated 2026-09-04 against current HEAD via `Select-String -Pattern "<a\s|<Link\s|onClick|href="`. Every target verified to exist and work (routes exist as `app/**/page.tsx`, handlers call live APIs or real navigation).
 
 ## Audit Summary
-- **Total buttons/links found**: 26
+- **Total buttons/links found**: 33
 - **Dead buttons (fixed)**: 0
-- **Working buttons**: 26
-- **Verification status**: ✅ ALL BUTTONS WIRING VERIFIED (2026-08-28)
-- **Frontend tests**: 17 passed (vitest) | **Backend tests**: 154 passed (pytest) | **Build**: 11/11 static
+- **Working buttons**: 33
+- **Verification status**: ✅ ALL BUTTONS WIRING VERIFIED (2026-09-04)
+- **Frontend tests**: 17 passed (vitest) | **Backend tests**: 154 passed (pytest) | **Build**: 14/14 static
 
 ## Wiring Table
 
@@ -41,7 +41,13 @@ Regenerated 2026-08-28 against current HEAD via `Select-String -Pattern "<a\s|<L
 | `components/layout/Header.tsx` | Mobile drawer `<Link href={href}>` (6 NAV items) | Dashboard routes (focus trap, escape) | ✅ |
 | `components/layout/Sidebar.tsx` | `<Link href={href}>` (6 nav items) | Dashboard routes (desktop rail) | ✅ |
 | `components/layout/Sidebar.tsx` | `<AvatarList>` | Display only (analyst roster) | ✅ |
-| `components/ui/AccountMenu.tsx` | `<button onClick={setOpen}>` + 5 items | Toggle menu, outside-click/Escape close, links to `/dashboard/settings` | ✅ |
+| `components/ui/AccountMenu.tsx` | `<button onClick={setOpen}>` + 5 items + Notifications panel | Toggle menu, outside-click/Escape close, Notifications live panel + Public profile modal | ✅ |
+| `components/ui/AccountMenu.tsx` | `Public profile` | `href: /dashboard/profile` — professional profile with login user details | ✅ |
+| `components/ui/AccountMenu.tsx` | `Account` | `href: /dashboard/account` — profile/security/session | ✅ |
+| `components/ui/AccountMenu.tsx` | `Accessibility` | `href: /dashboard/accessibility` — font scale, high contrast, reduce motion | ✅ |
+| `app/dashboard/profile/page.tsx` | `ProfilePage` | Uses `useLedgerStats` with loading/error, live ledger impact | ✅ |
+| `app/dashboard/account/page.tsx` | `AccountPage` | LocalStorage profile/security, export JSON, sign out | ✅ |
+| `app/dashboard/accessibility/page.tsx` | `AccessibilityPage` | Font scale live, high contrast, reduce motion, large targets | ✅ |
 | `components/ui/Button.tsx` | `<Link/Button href>` | Generic CTA (primary/secondary variants) | ✅ |
 | `components/ui/EmailBadge.tsx` | `<a href={href}>` | Generic mailto/badge | ✅ |
 | `components/ui/MenuButton.tsx` | `<button onClick={onClick}>` | Hamburger → X state reflects drawer | ✅ |

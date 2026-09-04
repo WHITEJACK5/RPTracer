@@ -50,7 +50,7 @@ test.describe("End-to-End Wiring Verification", () => {
 
   test("graph page shows empty state when no ring activity", async ({ page }) => {
     await page.goto("/dashboard/graph");
-    await expect(page.locator("text=No ring activity observed yet")).toBeVisible({ timeout: 15000 });
-    await expect(page.locator("text=Run a preset from the dashboard sandbox")).toBeVisible();
+    await expect(page.locator("text=no linkable entities yet")).toBeVisible({ timeout: 15000 });
+    await expect(page.locator("text=run an event to populate the graph")).toBeVisible();
   });
 });

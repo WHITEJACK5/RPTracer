@@ -46,7 +46,9 @@ class AuditLedger:
     def _load_and_verify(self) -> bool:
         ok = True
         head = "GENESIS"
+        self._entries = 0
         if not self.path.exists():
+            self._prev_hash = head
             return True
         with self.path.open("r", encoding="utf-8") as fh:
             for line in fh:

@@ -1,10 +1,8 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { alertStreamUrl, API_BASE } from "@/lib/api";
+import { alertStreamUrl, getApiBase } from "@/lib/api";
 import type { LiveAlert } from "@/lib/types";
-
-const POLL_URL = `${API_BASE}/api/v1/alerts`;
 
 function seed(): LiveAlert[] {
   return [
@@ -69,7 +67,7 @@ export function useLiveFeed(intervalMs = 4000, max = 60): {
       setConnected(false);
       pollTimer = setInterval(async () => {
         try {
-          const res = await fetch(POLL_URL);
+          const res = await fetch(`${getApiBase()}/api/v1/alerts`);
           if (!res.ok) return;
           const batch = (await res.json()) as LiveAlert[];
           if (!cancelled && Array.isArray(batch)) batch.forEach(push);
