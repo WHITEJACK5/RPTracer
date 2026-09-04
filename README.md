@@ -1,211 +1,309 @@
-# TRACER v1.0 — Autonomous Mule-Ring Defense for Razorpay Merchants
+# TRACER — Real-Time Mule-Ring Defense for Razorpay
 
-> **Razorpay AI Buildathon 2026 · Track 2: AI Risk Manager**
-> One loss class, measured end to end: **abuse-ring (mule) detection**.
-> TRACER links devices, VPAs, card fingerprints and IPs into a live entity graph,
-> detects fan-out rings in milliseconds, and hands the case to a *bounded* agent
-> that can only approve, challenge, or hold — every action written to a
-> tamper-evident ledger.
+> **Razorpay AI Buildathon 2026 · Track 2 · Defense-Only AI Risk Manager**
+> High-frequency GBDT scoring + structural graph topology + bounded agent + hash-chained audit ledger — all live, verified, and synced.
 
-## The headline capability
+[![Backend](https://img.shields.io/badge/backend-FastAPI-009688?style=flat-square)](backend/app/main.py)
+[![Frontend](https://img.shields.io/badge/frontend-Next.js%2014-000000?style=flat-square)](frontend/app/layout.tsx)
+[![Tests](https://img.shields.io/badge/tests-154%20passed-brightgreen?style=flat-square)](#reproducible-numbers)
+[![Build](https://img.shields.io/badge/build-14%2F14%20static-brightgreen?style=flat-square)](#quickstart)
+[![License](https://img.shields.io/badge/license-MIT-blue?style=flat-square)](#license)
+[![Design](https://img.shields.io/badge/design-tokens-ff69b4?style=flat-square)](frontend/styles/globals.css)
 
-A mule ring is one operator behind dozens of payment identities. Tabular models
-score each transaction in isolation and miss it; the topology gives it away.
-TRACER's detector runs on **graph topology heuristics — degree, fan-out,
-connected-component identity-mass analysis** (NetworkX; optional Neo4j mirror):
+Mule rings don't hide from topology. TRACER links devices, VPAs, card fingerprints, IPs and emails into a live entity graph, detects fan-out rings and same-amount repeat smurfing in milliseconds, and hands the case to a **bounded** agent that can only approve, challenge, or hold — every action written to a tamper-evident ledger.
 
-- ≥4 payment identities on one device ⇒ ring flagged with structural ratio ≥0.72
-- Verified the deterministic rule fires correctly end-to-end through the public API
-  (`backend/tests/test_graph_live_api.py`) on unseeded identifiers — not just
-  the seeded demo fixture. The test assembles rings via sequential live API
-  calls and asserts the rule triggers at fan_out ≥4 (live-API wiring
-  verification, not ML generalization)
-- Negative control: benign household fan-out (1 device, 2–3 VPAs) does NOT fire;
-  this false-positive-on-structure control is asserted in the same test file
+---
 
-> **GBDT disclosure (cannot be missed): At any calibrated confidence threshold
-> (p≥0.50 / 0.70 / 0.90) this tabular model's standalone recall is 0% on our
-> synthetic benchmark (`python data/generate_synthetic.py` → P=0.000 R=0.000
-> flagged 0–2); it is used only for SHAP explanation surfacing and
-> policy-floor inputs, not as a standalone detector. Ring detection on graph
-> topology is the headline claim for a reason.**
+## Table of Contents
+- [Live Demo](#live-demo)
+- [Headline Capability](#headline-capability)
+- [Architecture](#architecture)
+- [Tech Stack](#tech-stack)
+- [Quickstart](#quickstart)
+- [Environment](#environment)
+- [API Reference](#api-reference)
+- [Frontend — Routes & Design System](#frontend--routes--design-system)
+- [Reproducible Numbers](#reproducible-numbers)
+- [Security Notes](#security-notes)
+- [Model Card](#model-card)
+- [Limitations & Path to Production](#limitations--path-to-production)
+- [Verification](#verification)
+- [Contributing](#contributing)
 
-Everything else — RTO/COD scoring, LLM dispute dossiers — is listed under
-[Also included](#also-included-extensions-not-headline-claims).
+---
 
-## Reproducible numbers (run them yourself)
+## Live Demo
+- **App:** `http://localhost:3000` — Hermes landing → `Open Dashboard` → `Sandbox`
+- **Try a ring:** `Sandbox → Fire 5-Ring Sequence` (same device → 5 VPAs) → `Graph` shows red mule nodes, `Ledger` shows `HIGH` with `ring_detected:true`
+- **Try high-throughput:** `Sandbox → Fire Randomized Burst (200-400)` — fully randomized `₹25-5000`, 10% fixed-amount mule rings (`±₹3` tolerance), 1200/min rate limit, parallel `BATCH=6` — Overview pie, Ledger and Graph sync live within 3s
+- **Try same-amount smurfing:** Send same amount `₹500` 4× from same `device:DEV-SAME` within 1h → `MEDIUM` on 3rd, `HIGH` on 4th via `amount_repeat` detector (`±₹5` or `±2%`)
 
-| Command | What it proves |
-|---|---|
-| `python -m pytest backend/tests -q` | 154 tests: bands, idempotent replay, webhook signature honesty, novel-ring detection, negative control, injection sanitization, ledger tamper-evidence |
-| `python data/generate_synthetic.py` | GBDT quality vs an **independent** label process + FP cost table |
-| `python scripts/bench_latency.py` | real latency: sequential per-payment p50/p95/p99 |
-| `curl localhost:8000/api/v1/model/report` | live honest-metrics card |
-
-### Model quality — synthetic sanity check (not real-world performance)
-
-`data/ground_truth.py` generates labels via a process that shares **zero code**
-with the scorer: nonlinear interaction terms (`cod ∧ mismatch ∧ rto>0.4`,
-synthetic-identity conjunctions), a merchant-category confounder shifting amounts
-and fraud rates together, and 6.5% flipped labels. Latest run (seed 1337, 6k rows,
-8.65% prevalence):
-
-```
-AUPRC                 : 0.095   (baseline prevalence 0.086)
-Bayes ceiling AUPRC   : 0.114   (irreducible label-noise bound)
-efficiency vs ceiling : 83%
-flag riskiest 1%      : P=0.100  R=0.012  FP/1k-legit=9.9
-flag riskiest 5%      : P=0.090  R=0.052  FP/1k-legit=49.8
+```bash
+curl -X POST http://127.0.0.1:8000/api/v1/risk/evaluate \
+ -H "Content-Type: application/json" -H "X-Idempotency-Key: test1" \
+ -d '{"event_id":"curl_norm_123","amount":2500,"instrument":{"method":"upi","vpa":"user.normal@upi"},"customer":{"id":"cust_norm","new_customer":false,"account_age_days":800},"context":{"device_id":"DEV-NORMAL-123","ip":"103.25.45.12","txn_count_1h":1}}'
 ```
 
-Read that honestly: on a deliberately hostile benchmark (confounder + annotation
-noise), the tabular GBDT reaches 83% of the theoretical ceiling but modest
-absolute lift. At fixed flag-rates (riskiest 1% / 5%) lift is tiny (R=0.012 /
-0.052).
+---
 
-> **⚠️ Standalone GBDT recall at any calibrated threshold (p≥0.50 / 0.70 /
-> 0.90) is 0% on this synthetic benchmark (`python
-> data/generate_synthetic.py` current output: P=0.000 R=0.000 flagged 0–2);
-> the model is used only for SHAP explanation surfacing and policy-floor
-> inputs, not as a standalone detector. Ring detection on graph topology is
-> the actual headline claim — the GBDT is supplementary.**
+## Headline Capability
 
-Policy guardrails (hard floors on fan-out ≥5 devices etc.) guarantee HIGH-band
-escalation for extreme patterns regardless of model output.
+**Problem:** One operator behind dozens of payment identities. Tabular models score each transaction in isolation and miss it; topology gives it away.
 
-Real-data validation: `python scripts/train_real_data.py` is wired to train a fresh
-model on the [IEEE-CIS Fraud Detection dataset](https://www.kaggle.com/c/ieee-fraud-detection)
-(download required; the script prints instructions when absent and never invents
-numbers). **This validation has not been run yet** — the script and column mapping
-are complete, but the IEEE-CIS dataset requires a Kaggle account download. This is
-a stated next step, not a completed result.
+**Detector:** `backend/app/services/graph_detector.py: MuleDetector` on **NetworkX** (optional Neo4j mirror), **plus** `backend/app/services/amount_repeat.py` for same-amount smurfing:
 
-### Latency — measured, not invented
+- **Fan-out:** `≥4` payment identities on one device → ring flagged, `ring_structural_ratio = min(1, fan_out/4)`
+- **Same-amount repeat:** Same `device_id` sends same `amount ±₹5` or `±2%` **×4 in 1h/20 txns** → `MEDIUM` on 3rd, `HIGH` on 4th (amount-agnostic, `₹10-1000` range, pattern not size)
+- **Component mass:** `≥3` fan-out + `≥8` entities → `76` floor
+- **Negative control:** 1 device, 2-3 VPAs household does **not** fire
 
-`python scripts/bench_latency.py`, local dev box, single uvicorn process
-(fresh run 2026-08-28, Windows 10 build 26200, Python 3.11.9, commit b36e0d5, in-memory NetworkX, no Redis/Neo4j):
+> **Live-API wiring verification (not ML generalization):** `backend/tests/test_graph_live_api.py` assembles rings via sequential `POST /api/v1/risk/evaluate` and asserts `fan_out ≥4` triggers on unseeded identifiers.
+
+> **GBDT disclosure — cannot be missed:** At any calibrated threshold `p≥0.50/0.70/0.90` the standalone tabular GBDT recall is **0%** on the synthetic benchmark (`python data/generate_synthetic.py` → `P=0.000 R=0.000` flagged 0-2). It is used only for SHAP surfacing and policy floors, not as a standalone detector.
+
+---
+
+## Architecture
 
 ```
-SEQUENTIAL (n=200) — the per-payment decision path:
-  p50=53.3ms  p95=69.7ms  p99=78.1ms  max=100.6ms  18 req/s single-stream
-CONCURRENT (n=600, c=10):
-  p50=376.8ms  p95=436.2ms  p99=474.0ms  throughput 26 req/s over 22.7s
+                ┌─ Next.js 14 (App Router) ─────────────────┐
+                │  / (Hermes) → /login → /dashboard/*       │
+                │  Overview (Model Quality + Ledger Flow)    │
+                │  Sandbox (Presets + 5-Ring + Burst 200-400)│
+                │  Graph (per-session isolated, zoom/pan)    │
+                │  Ledger (120 live, 3s poll) · Transactions │
+                │  Settings · Profile · Account · A11y       │
+                └──────────────┬─────────────────────────────┘
+                               │ REST + SSE
+                ┌──────────────▼─────────────────────────────┐
+                │  FastAPI (backend/app)                     │
+                │  POST /api/v1/risk/evaluate ─┐             │
+                │  GET  /api/v1/graph/topology?session&center│
+                │  GET  /api/v1/ledger/stats & /ledger       │
+                │  GET  /healthz (503 if chain broken)       │
+                │  Middleware: CORS (explicit), Idempotency  │
+                │  (TTL 600, Redis→memory), RateLimit 5000/min│
+                └──────┬───────────────────┬─────────────────┘
+                       │                   │
+              ┌────────▼─────┐   ┌─────────▼──────────┐
+              │ MuleDetector │   │  amount_repeat    │
+              │ NetworkX     │   │  ±5 / 2% , 1h/20  │
+              │ fan_out      │   │  2→MED, 3→HIGH    │
+              └──────┬───────┘   └─────────┬──────────┘
+                     └──────────┬──────────┘
+                                ▼
+                    ┌───────────────────┐
+                    │ RiskModel (GBDT)  │
+                    │ XGBoost 24k rows  │
+                    │ + heuristic fallback│
+                    │ policy_floor 88/76│
+                    └─────────┬─────────┘
+                              ▼
+                    ┌───────────────────┐
+                    │ Bounded Agent     │
+                    │ 0-30 LOW → APPROVE│
+                    │ 31-70 MED → STEP_UP│
+                    │ 71-100 HIGH → HOLD│
+                    └─────────┬─────────┘
+                              ▼
+                    ┌───────────────────┐
+                    │ AuditLedger       │
+                    │ SHA256(prev||json)│
+                    │ double-entry      │
+                    │ O(1) state, O(n) deep │
+                    └───────────────────┘
 ```
 
-Conditions: Windows localhost transport degrades under high connection concurrency
-even for hello-world (verified with a bare Starlette control app); the
-sequential figure is the representative SLA measurement here. Linux/uvloop
-production numbers will differ. See `LIMITATIONS.md` Phase 6 for the same
-canonical numbers and caveats (single source of truth).
+**File tree (current):** `backend/app` (api/v1, core, models, services, infrastructure) + `frontend/app` (dashboard/*, login) + `data` (ground_truth, schema, ledger.jsonl) + `WIRING_AUDIT.md`
 
-Historical note: a prior run (pre-2026-08-28) reported p50=17.0ms / 52 req/s;
-that figure was from an earlier machine/commit and is retained only for
-comparison — the numbers above are the current reproducible measurement.
+---
 
-## The bounded agent (defense-only)
+## Tech Stack
 
-A state machine, not an LLM with tools. Whitelisted actions only:
-
-| Score | Band | Action |
+| Layer | Choice | Why |
 |---|---|---|
-| 0–30 | LOW | `AUTO_APPROVE` |
-| 31–70 | MEDIUM | `STEP_UP_AUTHENTICATION` (reversible OTP challenge) |
-| 71–100 | HIGH | `PAUSE_PAYOUT_AND_GENERATE_DISPUTE_DOSSIER` (24h hold + evidence pack) |
+| **Backend** | FastAPI, Pydantic v2, NetworkX, XGBoost, structlog | Async, strict schemas, in-memory graph `O(degree)` fan-out |
+| **Frontend** | Next.js 14 App Router, TypeScript, Tailwind, Recharts, Framer Motion, TanStack Query, next-themes | Tokenized design (`--color-*` in `globals.css`), SSR+CSR, live `refetchInterval` 3s |
+| **Infra** | SQLite WAL ledger, Redis (optional idempotency), Neo4j (optional mirror), Docker Compose | Single-process demo, production swaps to Redis Cluster / TigerGraph / Kafka |
+| **Design** | `frontend/styles/globals.css` holds **all** hex, `tailwind.config.ts` maps `danger/ok/warn/neon-green` → `var(--color-*)` | Zero hardcoded hex outside `globals.css` verified via `grep` |
+| **Fonts** | `next/font/local` with `Inter` + `JetBrainsMono` woff2 in `frontend/app/fonts` + `public/fonts` | Offline, `127.0.0.1 fonts.googleapis.com` blocked build passes |
 
-The system **never** moves, blocks, or retaliates against customer funds beyond a
-reversible platform-side payout pause; there is no offense-capable code path.
-LLM involvement is limited to drafting dossier text inside a strict Pydantic-
-validated schema, from sanitized inputs, with deterministic template fallback.
-
-### False-positive cost framing
-
-At the measured operating points, holding the riskiest 1% of transactions costs
-~10 legitimate holds per 1,000 (~₹1.8L review friction at ₹18.5k avg ticket) to
-catch fraud early in its lifecycle — versus full ticket + logistics loss per
-missed RTO/mule event. Holds are reversible within 24h; step-ups convert genuine
-customers into verified sales. Humans adjudicate anything irreversible.
-
-## Also included (extensions — not headline claims)
-
-- **RTO/COD abuse scoring**: COD + address mismatch + RTO history triggers hard
-  policy floors (80+) independent of the model.
-- **LLM dispute dossiers**: strict-schema evidence packs (GPT-4o-mini or template
-  fallback), reason codes, recommended actions.
-- **Tamper-evident audit ledger**: SHA-256 chained double-entry pairs; O(1)
-  integrity probes at `/healthz`, deep scan at `/api/v1/ledger/stats?deep=true`.
-- **Idempotency middleware**: Redis-backed (in-proc TTL fallback), replay-safe
-  decisions via `X-Idempotency-Key`.
-
-## Security notes
-
-- Webhooks: HMAC-SHA256 verified when `RAZORPAY_WEBHOOK_SECRET` is set; without
-  it responses explicitly report `webhook_signature_verified: false` plus a skip
-  reason (never silently "verified"). Set `RAZORPAY_REQUIRE_WEBHOOK_SECRET=1`
-  in production to reject unsigned traffic outright (403).
-- Prompt injection: all attacker-controlled strings (VPAs, emails, notes) pass a
-  sanitizer before any LLM call — control/zero-width chars stripped, injection
-  markers detected and everything after them dropped, lengths capped; tested in
-  `test_prompt_injection_is_neutralized`.
-- Secrets live in env vars only; nothing is hardcoded or committed.
-
-## Model card (summary)
-
-- **Detects**: device→identity fan-out rings; velocity/new-account bursts;
-  COD-RTO abuse patterns; synthetic-identity conjunctions.
-- **Does not detect**: off-platform collusion with no shared entities; fraud on
-  identifiers we've never seen (cold start); anything requiring cross-merchant
-  data we don't have.
-- **Validated on**: decoupled synthetic GT (see above); IEEE-CIS mapping provided
-  as script; live-API ring-recovery + negative-control tests.
-- **Known failure modes**: heavy label noise caps structural confidence (fixed
-  thresholds look sparse by design); confounder leakage if merchant mix shifts;
-  graph features assume identifier stability (rotating devices evade fan-out).
-
-## Path to production (what this is not)
-
-This is a hackathon prototype, not a production deployment. A senior reviewer
-should know exactly what stands between this and a real system:
-
-- **Training data**: Real chargeback-labeled transaction data with a proper
-  time-based holdout (not synthetic ground truth with artificial label noise).
-- **Device fingerprinting**: A real vendor (e.g. FingerprintJS, ThreatMetrix)
-  instead of self-reported `device_id` — the current identifier is trivially
-  spoofed.
-- **Human review UI**: A queue for HIGH-band holds where analysts can approve,
-  escalate, or release within the 24h window.
-- **Compliance controls**: PCI-adjacent data handling, audit log retention,
-  PII redaction in LLM calls, SOC-2-style access controls.
-- **Incident response runbook**: What happens when the detector fires on a
-  legitimate customer during a festival sale spike? Who pages, what SLA?
-- **Multi-region failover**: The ledger and graph state are single-node in-memory.
-  Production requires Redis Cluster or equivalent for horizontal scaling.
-- **Real load testing**: Full 1,000+ RPS sustained concurrency on Linux with
-  Redis/Neo4j network hops, not localhost transport.
-
-Naming these gaps accurately, unprompted, is the point — not pretending they
-don't exist.
+---
 
 ## Quickstart
 
 ```bash
-# Backend (canonical app factory lives in backend/app)
+# Backend
 pip install -r backend/requirements.txt
-uvicorn backend.app.main:app --port 8000    # entrypoint; /healthz · /metrics · /docs (if DOCS_ENABLED=1)
+uvicorn backend.app.main:app --host 0.0.0.0 --port 8000
+# -> /healthz 200 ok, /docs (if DOCS_ENABLED=1), /metrics
 
-# Frontend (now lives in frontend/)
-cd frontend && npm install && npm run dev   # dashboard on http://localhost:3000
+# Frontend
+cd frontend && npm install && npm run dev -- -H 0.0.0.0 -p 3000
+# -> http://localhost:3000 (use localhost, not 127.0.0.1, due to -H 0.0.0.0 IPv4 binding)
+
+# Full stack
+docker compose up --build
 ```
 
-Optional env (see `.env.example`): `ENVIRONMENT`, `DOCS_ENABLED`,
-`REDIS_URL`, `NEO4J_URI`, `OPENAI_API_KEY`, `ANTHROPIC_API_KEY`,
-`LLM_MODEL`, `RAZORPAY_WEBHOOK_SECRET`, `REQUIRE_WEBHOOK_SECRET`,
-`IDEMPOTENCY_TTL_SECONDS`, `NEXT_PUBLIC_API_BASE`. Full stack:
-`docker compose up --build`.
+**Default ports:** Backend `0.0.0.0:8000`, Frontend `0.0.0.0:3000` (both `0.0.0.0` for Chrome IPv4; `localhost` in browser works, `127.0.0.1` may not for frontend without `-H 0.0.0.0`).
 
-> **Restructured (Section 1.1):** backend source now lives under `backend/app/`
-> (api/v1, core, models, services, infrastructure) with backward-compatible shims
-> at the old `backend/` paths. Frontend was moved into `frontend/`. See
-> [ARCHITECTURE.md](ARCHITECTURE.md) and [DECISIONS.md](DECISIONS.md).
+---
 
-See [ARCHITECTURE.md](ARCHITECTURE.md) for the component map and the actual file
-tree of this repo.
+## Environment
+
+Copy `.env.example` → `.env`:
+
+```
+ENVIRONMENT=development
+DOCS_ENABLED=1
+REDIS_URL= # optional, falls back to in-memory
+NEO4J_URI= # optional, non-blocking mirror
+OPENAI_API_KEY= # optional, template fallback for dossiers
+RAZORPAY_WEBHOOK_SECRET= # optional, if unset responses report verified:false
+REQUIRE_WEBHOOK_SECRET=0
+IDEMPOTENCY_TTL_SECONDS=600
+NEXT_PUBLIC_API_BASE=http://127.0.0.1:8000
+# Rate limits (5000/min allows 200-400 burst in ~20s)
+# RATE_LIMIT_IP_PER_MIN=5000 (default via constants.py)
+```
+
+---
+
+## API Reference
+
+| Method | Path | Auth | Description |
+|---|---|---|---|
+| `GET` | `/healthz` | None | `200 ok` or `503 degraded` with `audit_chain_verified`, `uptime_s` |
+| `POST` | `/api/v1/risk/evaluate` | `X-Idempotency-Key` | Main scoring: `TransactionEvent` → `RiskEvaluation` with `risk_score`, `risk_band`, `graph_evidence`, `shap` |
+| `POST` | `/api/v1/evaluate` | — | Legacy alias for smoke tests |
+| `GET` | `/api/v1/graph/topology?center=&session=` | — | Ego-graph `radius 2`, per-session isolated when `session` set |
+| `POST` | `/api/v1/graph/reset-demo` | — | Clears graph (anyone can wipe demo state) |
+| `GET` | `/api/v1/ledger/stats` | — | `entries`, `chain_verified`, `chain_head` |
+| `GET` | `/api/v1/ledger?limit=120` | — | Recent `120` audit entries (amount now shows **transaction amount**, not risk_score) |
+| `GET` | `/api/v1/model/report` | — | Honest metrics card (hold-out) |
+| `GET` | `/api/v1/model/info` | — | `model_version`, `artifact_sha256`, `feature_names` |
+| `GET` | `/api/v1/presets` | — | Sample payloads |
+| `POST` | `/api/v1/webhooks/razorpay` | `X-Razorpay-Signature` HMAC | Dual-mode: `403` if `REQUIRE=1` and unsigned |
+| `GET` | `/api/v1/alerts` | — | Polling fallback for live feed |
+| `GET` | `/api/v1/stream/alerts` | — | SSE `text/event-stream` |
+
+---
+
+## Frontend — Routes & Design System
+
+**Routes (14 static):** `/`, `/login`, `/dashboard`, `/dashboard/sandbox`, `/dashboard/graph`, `/dashboard/ledger`, `/dashboard/transactions`, `/dashboard/settings`, `/dashboard/profile`, `/dashboard/account`, `/dashboard/accessibility`
+
+**Sandbox:** `Presets` (4), `Build a Ring Live` (5-ring `ring_detected` flip), **`Randomized Burst (200-400)`** — `25-5000` per txn, 10% fixed-amount mule rings (`±₹3`), parallel `BATCH=6` (~18 rps), progress bar + `HIGH/MED/LOW` stats, persisted `tracer.burstSessions` for per-session graph
+
+**Graph:** Industrial canvas (`GraphCanvas.tsx`): radial hub layout for 115 nodes, zoom (`- + RESET` + wheel), pan (drag), click node → inspector (degree, neighbors, mule flag), bottom-right `↻ Refresh` + top `Session` dropdown (Latest vs per-burst isolated), `115 nodes 253 edges 26 MULE` chips
+
+**Ledger:** `120 most recent, auto-refresh 3s`, `LIVE SYNC` badge, `CHAIN ENTRIES` table with `Band`, `Amount` (₹25-5000), `Action`, `Side`, `Hash`, `INTEGRITY REPORT` with `Recent writes`
+
+**Overview:** `Model Quality (Hold-Out)` (bar) + `Ledger Flow` (donut: `HIGH/MED/LOW` from last 100 ledger bands) each with separate `↻ Refresh` at bottom-right, `LIVE`
+
+**Design tokens:** **0 hardcoded hex** outside `frontend/styles/globals.css` — verified via `grep -r '#[0-9a-f]' frontend/app frontend/components frontend/hooks frontend/lib`
+
+**Header:** `56×56` logo (`/logo.png` transparent, `h-14 w-14`, `gap-1.5` to `TRACER`) + `Header` + `Sidebar` + `AccountMenu` (Public profile → `/dashboard/profile` with login email, Notifications live panel, Account, Accessibility)
+
+---
+
+## Reproducible Numbers
+
+| Command | What it proves |
+|---|---|
+| `python -m pytest backend/tests -q` | `154` tests: bands, idempotent replay, HMAC, ring detection, negative control, injection, ledger tamper-evidence |
+| `python data/generate_synthetic.py` | GBDT vs independent ground truth (nonlinear + confounder + 6.5% flip) |
+| `python scripts/bench_latency.py` | `p50/p95/p99` per-payment latency |
+| `curl localhost:8000/api/v1/model/report` | Live honest-metrics card |
+
+### Model quality — synthetic sanity check (not real-world)
+
+`data/ground_truth.py` shares **zero code** with scorer; `amount_log` not directly in logit except via confounder (amount-agnostic).
+
+Latest (seed 1337, 6k, 8.65% prevalence):
+```
+AUPRC                 : 0.095   (baseline 0.086)
+Bayes ceiling AUPRC   : 0.114   (label-noise bound)
+efficiency vs ceiling : 83%
+flag riskiest 1%      : P=0.100 R=0.012 FP/1k=9.9
+flag riskiest 5%      : P=0.090 R=0.052 FP/1k=49.8
+```
+> **GBDT standalone recall at `p≥0.50/0.70/0.90` is 0%** (`P=0.000 R=0.000`); used only for SHAP.
+
+### Latency — measured (fresh 2026-08-28, Win10 build 26200, Py3.11.9, commit `b36e0d5`, single uvicorn, NetworkX, no Redis):
+
+```
+SEQUENTIAL (n=200): p50=53.3ms p95=69.7ms p99=78.1ms max=100.6ms 18 req/s
+CONCURRENT (n=600,c=10): p50=376.8ms 26 req/s over 22.7s
+```
+
+### Same-amount repeat (new, amount-agnostic till ₹1000):
+
+```
+Same device same amount 500×4 → LOW, LOW, MEDIUM, HIGH (4th triggers 88 floor, ±₹5/2% tolerance, 1h/20 window)
+High amount clean 50000 → LOW (isolated, fan_out 1)
+```
+
+---
+
+## Security Notes
+
+- **Webhooks:** HMAC-SHA256 verified when `RAZORPAY_WEBHOOK_SECRET` set; without it `verified:false` + reason. `REQUIRE_WEBHOOK_SECRET=1` → `403` on unsigned.
+- **Prompt injection:** All VPA/email/note strings sanitized before LLM (control/zero-width stripped, markers dropped, length capped) — tested `test_prompt_injection_is_neutralized`.
+- **CORS:** Explicit allow-list, `allow_credentials True` with explicit `allow_headers` + `allow_methods [GET,POST,OPTIONS]` (fixed from `*`).
+- **Idempotency:** `X-Idempotency-Key` TTL 600, Redis→memory fallback, key = `path::key` (not body-hashed — same key on different payload replays).
+- **Ledger:** `SHA256(prev_hash||canonical)` double-entry, `O(1)` `state()`, `?deep=true` full re-scan.
+
+---
+
+## Model Card
+
+- **Detects:** Device→identity fan-out, same-amount repeat smurfing (till 1000), velocity bursts, COD-RTO, synthetic identity.
+- **Does not detect:** Off-platform collusion with no shared entities; cold-start identifiers; cross-merchant data.
+- **Validated on:** Decoupled synthetic GT + live-API ring wiring + same-amount repeat unit tests.
+- **Weights (heuristic fallback, SHAP anchors):** `mule_confidence 3.40`, `device_fan_out 3.20` >> `amount_log 0.18` (pattern > amount), bias `-3.55`.
+
+---
+
+## Limitations & Path to Production
+
+This is a **hackathon prototype**, not production:
+
+- **Training data:** Needs real chargeback-labeled, time-based holdout (not synthetic 6.5% flip).
+- **Device fingerprint:** `device_id` is self-reported; production needs FingerprintJS/ThreatMetrix.
+- **Review UI:** `POST /reviews/{event_id}/label` exists but no queue UI beyond `GET /reviews`.
+- **Compliance:** PCI-adjacent handling, PII redaction in LLM, SOC-2.
+- **Scale:** Single-node NetworkX + SQLite; production → Redis Cluster, TigerGraph/Neo4j, Kafka streaming. Current `5000/min` allows 200-400 burst; sustained 1000+ RPS needs Linux/uvloop.
+- **Ledger:** Single file, no rotation; production needs partitioned WAL + cold storage.
+
+---
+
+## Verification
+
+```bash
+npx tsc --noEmit          # EXIT 0 (GraphCanvas downlevelIteration fixed)
+npm run build             # 14/14 static
+npm run test              # 7 files 17 tests
+python -m pytest -q       # 154 passed
+python scripts/bench_latency.py
+python data/generate_synthetic.py  # 0.095 AUPRC
+curl http://127.0.0.1:8000/healthz  # 200 ok
+```
+
+`WIRING_AUDIT.md` — **33/33 verified** (2026-09-04), `LIMITATIONS.md` + `ARCHITECTURE.md` + `DECISIONS.md` document trade-offs.
+
+---
+
+## Contributing
+
+Conventional commits, `pre-commit` hooks, `ruff` + `eslint`.
+
+## License
+
+MIT — see `LICENSE`.
+
+## Authors
+
+Built for Razorpay AI Buildathon 2026 Track 2 by the TRACER team.
+
