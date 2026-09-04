@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useTheme } from "next-themes";
 import { Accessibility, Bell, LogOut, Palette, Settings, User } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useLiveFeed } from "@/hooks/useLiveFeed";
 
 type Item =
   | { label: string; icon: typeof User; href: string }
@@ -17,16 +18,27 @@ type Item =
  */
 export default function AccountMenu() {
   const [open, setOpen] = useState(false);
+  const [showNotifications, setShowNotifications] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
+  const notifRef = useRef<HTMLDivElement>(null);
   const { resolvedTheme, setTheme } = useTheme();
+  const { alerts } = useLiveFeed();
 
   useEffect(() => {
-    if (!open) return;
+    if (!open && !showNotifications) return;
     function onClick(e: MouseEvent) {
-      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+      const target = e.target as Node;
+      if (ref.current && !ref.current.contains(target) && notifRef.current && !notifRef.current.contains(target)) {
+        setOpen(false);
+        setShowNotifications(false);
+      } else if (ref.current && !ref.current.contains(target) && !notifRef.current) {
+        setOpen(false);
+      } else if (notifRef.current && !notifRef.current.contains(target) && !ref.current?.contains(target)) {
+        setShowNotifications(false);
+      }
     }
     function onKey(e: KeyboardEvent) {
-      if (e.key === "Escape") setOpen(false);
+      if (e.key === "Escape") { setOpen(false); setShowNotifications(false); }
     }
     document.addEventListener("mousedown", onClick);
     document.addEventListener("keydown", onKey);
@@ -34,7 +46,7 @@ export default function AccountMenu() {
       document.removeEventListener("mousedown", onClick);
       document.removeEventListener("keydown", onKey);
     };
-  }, [open]);
+  }, [open, showNotifications]);
 
   const items: Item[] = [
     { label: "Public profile", icon: User, href: "/dashboard/settings" },
@@ -45,7 +57,7 @@ export default function AccountMenu() {
       onSelect: () => setTheme(resolvedTheme === "dark" ? "light" : "dark"),
     },
     { label: "Accessibility", icon: Accessibility, href: "/dashboard/settings" },
-    { label: "Notifications", icon: Bell, href: "/dashboard/settings" },
+    { label: "Notifications", icon: Bell, onSelect: () => { setShowNotifications(true); setOpen(false); } },
   ];
 
   const signOut: Item = {
@@ -72,6 +84,34 @@ export default function AccountMenu() {
       >
         <User size={16} />
       </button>
+      {showNotifications && (
+        <div ref={notifRef} className="absolute right-0 top-11 z-50 flex max-h-[420px] w-80 flex-col overflow-hidden rounded-[var(--radius-md)] border border-border bg-bg-secondary shadow-xl">
+          <div className="flex items-center justify-between border-b border-border px-4 py-3">
+            <h3 className="flex items-center gap-2 font-sans text-sm font-bold text-text-primary"><Bell size={14} /> Notifications</h3>
+            <span className="rounded-full bg-accent/15 px-2 py-0.5 font-mono text-[11px] text-accent">{alerts.length} live</span>
+          </div>
+          <div className="flex-1 overflow-y-auto p-2">
+            {alerts.length === 0 ? (
+              <p className="px-3 py-8 text-center font-mono text-xs text-text-muted">No notifications yet — fire a burst in Sandbox to generate alerts.</p>
+            ) : (
+              alerts.slice(0, 12).map((a) => (
+                <div key={a.id} className="mb-1.5 flex gap-2.5 rounded-md border border-border bg-bg-primary/50 px-3 py-2.5">
+                  <span className={`mt-1 h-2 w-2 shrink-0 rounded-full ${a.level === "alert" ? "bg-danger" : a.level === "warn" ? "bg-gold-500" : a.level === "success" ? "bg-neon-green" : "bg-text-muted"}`} />
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate font-mono text-xs font-semibold text-text-primary">{a.title}</p>
+                    <p className="truncate font-mono text-[11px] text-text-muted">{a.detail}</p>
+                    <p className="font-mono text-[10px] text-text-muted">{new Date(a.ts).toLocaleTimeString()}</p>
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
+          <div className="flex items-center justify-between border-t border-border bg-bg-tertiary/30 px-3 py-2">
+            <span className="font-mono text-[11px] text-text-muted">Synced with Overview · Ledger · Graph</span>
+            <button onClick={() => setShowNotifications(false)} className="font-mono text-xs font-medium text-accent hover:underline">Close</button>
+          </div>
+        </div>
+      )}
 
       {open && (
         <div
