@@ -1,4 +1,4 @@
 # TRACER backend — dev/test dependencies
 -r requirements.txt
 pytest>=8.2
-hypothesis>=6.100
+hypothesis>=6.167.1
