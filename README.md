@@ -295,42 +295,89 @@ curl http://127.0.0.1:8000/healthz  # 200 ok
 
 ## Media & Sessions
 
-### Demo Videos (in `Downloads/`)
+All demo media is checked into `docs/` so GitHub renders it inline. No absolute Windows paths.
 
-- `RPTracer_Vox_Engineer_Masterclass.mp4` – 9 min 44 s engineer masterclass narration.
-- `RPTracer_Whiteboard_Explainer.mp4` – 60 s whiteboard walk‑through.
-- `RPTracer_Jury_Trailer_2min.mp4` – 2 min 54 s jury trailer.
-- `TRACER v1.0 — AI Risk Manager - Google Chrome 2026-09-05 21-31-39.mp4` – capture from 21:31:39.
-- `TRACER v1.0 — AI Risk Manager - Google Chrome 2026-09-05 21-30-02.mp4` – capture from 21:30:02.
+### Demo videos
 
-### Screenshot Captures (OneDrive)
+Two full screen captures (Chrome, 2026-09-05). Play inline on GitHub or download.
 
-- `C:\Users\BHARADWAJA REDDY\Pictures\Screenshots\Screenshot 2026-09-05 212646.png`
-- `C:\Users\BHARADWAJA REDDY\Pictures\Screenshots\Screenshot 2026-09-05 212737.png`
-- `C:\Users\BHARADWAJA REDDY\Pictures\Screenshots\Screenshot 2026-09-05 212751.png`
-- `C:\Users\BHARADWAJA REDDY\Pictures\Screenshots\Screenshot 2026-09-05 212801.png`
-- `C:\Users\BHARADWAJA REDDY\Pictures\Screenshots\Screenshot 2026-09-05 212821.png`
-- `C:\Users\BHARADWAJA REDDY\Pictures\Screenshots\Screenshot 2026-09-05 212910.png`
-- `C:\Users\BHARADWAJA REDDY\Pictures\Screenshots\Screenshot 2026-09-05 212920.png`
-- `C:\Users\BHARADWAJA REDDY\Pictures\Screenshots\Screenshot 2026-09-05 212935.png`
-- `C:\Users\BHARADWAJA REDDY\Pictures\Screenshots\Screenshot 2026-09-05 213106.png`
-- `C:\Users\BHARADWAJA REDDY\Pictures\Screenshots\Screenshot 2026-09-05 213237.png`
-- `C:\Users\BHARADWAJA REDDY\Pictures\Screenshots\Screenshot 2026-09-05 213252.png`
-- `C:\Users\BHARADWAJA REDDY\Pictures\Screenshots\Screenshot 2026-09-05 213302.png`
-- `C:\Users\BHARADWAJA REDDY\Pictures\Screenshots\Screenshot 2026-09-05 213317.png`
-- `C:\Users\BHARADWAJA REDDY\Pictures\Screenshots\Screenshot 2026-09-05 213328.png`
-- `C:\Users\BHARADWAJA REDDY\Pictures\Screenshots\Screenshot 2026-09-05 213340.png`
-- `C:\Users\BHARADWAJA REDDY\Pictures\Screenshots\Screenshot 2026-09-05 213355.png`
-- `C:\Users\BHARADWAJA REDDY\Pictures\Screenshots\Screenshot 2026-09-05 213404.png`
+<video src="docs/videos/capture-213002.mp4" controls width="800"></video>
 
-### Session Timeline
+[Download capture 21:30:02 (69.9 MB)](docs/videos/capture-213002.mp4)
 
-- **Session 1** (Day 1): Initial ring‑detection prototype.
-- **Session 2** (Day 2): Graph isolation & session‑id handling.
-- **Session 3** (Day 3): Same‑amount repeat detector tuning.
-- **Session 4** (Day 4): Burst throughput parallelization.
-- **Session 5** (Day 5): Benchmark finalisation and honest disclosure.
-- **Session 6** (Day 6): Presentation deck polishing and media embedding.
+<video src="docs/videos/capture-213139.mp4" controls width="800"></video>
+
+[Download capture 21:31:39 (95.2 MB)](docs/videos/capture-213139.mp4)
+
+Narrated cuts (in `Downloads/`, not in git):
+
+- `RPTracer_Vox_Engineer_Masterclass.mp4` - 9 min 44 s engineer masterclass
+- `RPTracer_Whiteboard_Explainer.mp4` - 60 s whiteboard walk-through
+- `RPTracer_Jury_Trailer_2min.mp4` - 2 min 54 s jury trailer
+
+### Screenshots
+
+17 captures, 2026-09-05 21:26-21:34. Full flow: landing, sign-in, overview, sandbox, transactions, ledger, settings, profile, account, accessibility, notifications.
+
+#### 01 - 21:26:46
+![TRACER capture 21:26:46](docs/screenshots/screenshot-01-212646.png)
+
+#### 02 - 21:27:37
+![TRACER capture 21:27:37](docs/screenshots/screenshot-02-212737.png)
+
+#### 03 - 21:27:51
+![TRACER capture 21:27:51](docs/screenshots/screenshot-03-212751.png)
+
+#### 04 - 21:28:01
+![TRACER capture 21:28:01](docs/screenshots/screenshot-04-212801.png)
+
+#### 05 - 21:28:21
+![TRACER capture 21:28:21](docs/screenshots/screenshot-05-212821.png)
+
+#### 06 - 21:29:10
+![TRACER capture 21:29:10](docs/screenshots/screenshot-06-212910.png)
+
+#### 07 - 21:29:20
+![TRACER capture 21:29:20](docs/screenshots/screenshot-07-212920.png)
+
+#### 08 - 21:29:35
+![TRACER capture 21:29:35](docs/screenshots/screenshot-08-212935.png)
+
+#### 09 - 21:31:06
+![TRACER capture 21:31:06](docs/screenshots/screenshot-09-213106.png)
+
+#### 10 - 21:32:37
+![TRACER capture 21:32:37](docs/screenshots/screenshot-10-213237.png)
+
+#### 11 - 21:32:52
+![TRACER capture 21:32:52](docs/screenshots/screenshot-11-213252.png)
+
+#### 12 - 21:33:02
+![TRACER capture 21:33:02](docs/screenshots/screenshot-12-213302.png)
+
+#### 13 - 21:33:17
+![TRACER capture 21:33:17](docs/screenshots/screenshot-13-213317.png)
+
+#### 14 - 21:33:28
+![TRACER capture 21:33:28](docs/screenshots/screenshot-14-213328.png)
+
+#### 15 - 21:33:40
+![TRACER capture 21:33:40](docs/screenshots/screenshot-15-213340.png)
+
+#### 16 - 21:33:55
+![TRACER capture 21:33:55](docs/screenshots/screenshot-16-213355.png)
+
+#### 17 - 21:34:04
+![TRACER capture 21:34:04](docs/screenshots/screenshot-17-213404.png)
+
+### Session timeline
+
+- **Session 1** (Day 1): Initial ring-detection prototype.
+- **Session 2** (Day 2): Graph isolation and session-id handling.
+- **Session 3** (Day 3): Same-amount repeat detector tuning.
+- **Session 4** (Day 4): Burst throughput parallelization.
+- **Session 5** (Day 5): Benchmark finalisation and honest disclosure.
+- **Session 6** (Day 6): Presentation deck polishing and media embedding.
 
 ---
 
