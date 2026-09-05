@@ -293,6 +293,45 @@ curl http://127.0.0.1:8000/healthz  # 200 ok
 
 `WIRING_AUDIT.md` — **33/33 verified** (2026-09-04), `LIMITATIONS.md` + `ARCHITECTURE.md` + `DECISIONS.md` document trade-offs.
 
+## Media & Sessions
+
+### Demo Videos (in `Downloads/`)
+
+- `RPTracer_Vox_Engineer_Masterclass.mp4` – 9 min 44 s engineer masterclass narration.
+- `RPTracer_Whiteboard_Explainer.mp4` – 60 s whiteboard walk‑through.
+- `RPTracer_Jury_Trailer_2min.mp4` – 2 min 54 s jury trailer.
+- `TRACER v1.0 — AI Risk Manager - Google Chrome 2026-09-05 21-31-39.mp4` – capture from 21:31:39.
+- `TRACER v1.0 — AI Risk Manager - Google Chrome 2026-09-05 21-30-02.mp4` – capture from 21:30:02.
+
+### Screenshot Captures (OneDrive)
+
+- `C:\Users\BHARADWAJA REDDY\Pictures\Screenshots\Screenshot 2026-09-05 212646.png`
+- `C:\Users\BHARADWAJA REDDY\Pictures\Screenshots\Screenshot 2026-09-05 212737.png`
+- `C:\Users\BHARADWAJA REDDY\Pictures\Screenshots\Screenshot 2026-09-05 212751.png`
+- `C:\Users\BHARADWAJA REDDY\Pictures\Screenshots\Screenshot 2026-09-05 212801.png`
+- `C:\Users\BHARADWAJA REDDY\Pictures\Screenshots\Screenshot 2026-09-05 212821.png`
+- `C:\Users\BHARADWAJA REDDY\Pictures\Screenshots\Screenshot 2026-09-05 212910.png`
+- `C:\Users\BHARADWAJA REDDY\Pictures\Screenshots\Screenshot 2026-09-05 212920.png`
+- `C:\Users\BHARADWAJA REDDY\Pictures\Screenshots\Screenshot 2026-09-05 212935.png`
+- `C:\Users\BHARADWAJA REDDY\Pictures\Screenshots\Screenshot 2026-09-05 213106.png`
+- `C:\Users\BHARADWAJA REDDY\Pictures\Screenshots\Screenshot 2026-09-05 213237.png`
+- `C:\Users\BHARADWAJA REDDY\Pictures\Screenshots\Screenshot 2026-09-05 213252.png`
+- `C:\Users\BHARADWAJA REDDY\Pictures\Screenshots\Screenshot 2026-09-05 213302.png`
+- `C:\Users\BHARADWAJA REDDY\Pictures\Screenshots\Screenshot 2026-09-05 213317.png`
+- `C:\Users\BHARADWAJA REDDY\Pictures\Screenshots\Screenshot 2026-09-05 213328.png`
+- `C:\Users\BHARADWAJA REDDY\Pictures\Screenshots\Screenshot 2026-09-05 213340.png`
+- `C:\Users\BHARADWAJA REDDY\Pictures\Screenshots\Screenshot 2026-09-05 213355.png`
+- `C:\Users\BHARADWAJA REDDY\Pictures\Screenshots\Screenshot 2026-09-05 213404.png`
+
+### Session Timeline
+
+- **Session 1** (Day 1): Initial ring‑detection prototype.
+- **Session 2** (Day 2): Graph isolation & session‑id handling.
+- **Session 3** (Day 3): Same‑amount repeat detector tuning.
+- **Session 4** (Day 4): Burst throughput parallelization.
+- **Session 5** (Day 5): Benchmark finalisation and honest disclosure.
+- **Session 6** (Day 6): Presentation deck polishing and media embedding.
+
 ---
 
 ## Contributing
