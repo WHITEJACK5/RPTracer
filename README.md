@@ -28,6 +28,7 @@ Mule rings don't hide from topology. TRACER links devices, VPAs, card fingerprin
 - [Model Card](#model-card)
 - [Limitations & Path to Production](#limitations--path-to-production)
 - [Verification](#verification)
+- [Media & Sessions](#media--sessions)
 - [Contributing](#contributing)
 
 ---
@@ -295,89 +296,127 @@ curl http://127.0.0.1:8000/healthz  # 200 ok
 
 ## Media & Sessions
 
-All demo media is checked into `docs/` so GitHub renders it inline. No absolute Windows paths.
+All demo media is versioned in `docs/`, so every screenshot and screen capture below renders inline on GitHub. Recorded in Chrome against the local stack (frontend on `:3000`, backend on `:8000`).
 
 ### Demo videos
 
-Two full screen captures (Chrome, 2026-09-05). Play inline on GitHub or download.
+Two end-to-end screen captures of the analyst flow: landing, sign-in, overview telemetry, sandbox burst, transactions, ledger verification, and settings. Play inline on GitHub or download.
 
 <video src="docs/videos/capture-213002.mp4" controls width="800"></video>
 
-[Download capture 21:30:02 (69.9 MB)](docs/videos/capture-213002.mp4)
+- **Console walkthrough, part 1** - full analyst flow from landing through ledger verification. [Download part 1](docs/videos/capture-213002.mp4) (69.9 MB)
+- **Console walkthrough, part 2** - continuation covering settings, profile, theming, and notifications. [Download part 2](docs/videos/capture-213139.mp4) (95.2 MB)
 
 <video src="docs/videos/capture-213139.mp4" controls width="800"></video>
 
-[Download capture 21:31:39 (95.2 MB)](docs/videos/capture-213139.mp4)
-
 Narrated cuts (in `Downloads/`, not in git):
 
-- `RPTracer_Vox_Engineer_Masterclass.mp4` - 9 min 44 s engineer masterclass
-- `RPTracer_Whiteboard_Explainer.mp4` - 60 s whiteboard walk-through
-- `RPTracer_Jury_Trailer_2min.mp4` - 2 min 54 s jury trailer
+- `RPTracer_Vox_Engineer_Masterclass.mp4` - 9 min 44 s engineer masterclass narration.
+- `RPTracer_Whiteboard_Explainer.mp4` - 60 s whiteboard walk-through.
+- `RPTracer_Jury_Trailer_2min.mp4` - 2 min 54 s jury trailer.
 
-### Screenshots
+### Product tour
 
-17 captures, 2026-09-05 21:26-21:34. Full flow: landing, sign-in, overview, sandbox, transactions, ledger, settings, profile, account, accessibility, notifications.
+15 annotated captures in analyst-flow order. Each note states what to look at and how to reproduce it. Values visible in screenshots (ledger counts, chain heads, donut splits) are from the recorded run; the canonical, re-runnable numbers live in [Reproducible Numbers](#reproducible-numbers).
 
-#### 01 - 21:26:46
-![TRACER capture 21:26:46](docs/screenshots/screenshot-01-212646.png)
+#### Landing - reproducible clean-transaction example
 
-#### 02 - 21:27:37
-![TRACER capture 21:27:37](docs/screenshots/screenshot-02-212737.png)
+![Landing - clean UPI API example](docs/screenshots/screenshot-03-212751.png)
 
-#### 03 - 21:27:51
-![TRACER capture 21:27:51](docs/screenshots/screenshot-03-212751.png)
+**What this shows:** the public landing page's copy-paste `curl` for a clean UPI payment returning `risk_score: 2`, `risk_band: LOW`, `decision: AUTO_APPROVE` in ~152 ms, plus the Ingest and Score pipeline cards. **Look at:** the response footer (score, band, decision, latency) and the `#1 Ingest` / `#2 Score` cards tying the UI to the append-only ledger and GBDT-plus-graph scorer. **Reproduce:** paste the shown `curl` against `POST /api/v1/risk/evaluate` with `X-Idempotency-Key` and compare the footer.
 
-#### 04 - 21:28:01
-![TRACER capture 21:28:01](docs/screenshots/screenshot-04-212801.png)
+#### Landing - mule-ring example and single-event behavior
 
-#### 05 - 21:28:21
-![TRACER capture 21:28:21](docs/screenshots/screenshot-05-212821.png)
+![Landing - mule-ring API example](docs/screenshots/screenshot-04-212801.png)
 
-#### 06 - 21:29:10
-![TRACER capture 21:29:10](docs/screenshots/screenshot-06-212910.png)
+**What this shows:** the `Mule Ring` tab (`curl_ring_123`, Rs 45,000, `DEV-MULE-RING-01`) returning `risk_score: 17, LOW` on first touch. **Look at:** a single mule-flavored event does not jump straight to HIGH - the ring fires only once fan-out crosses the threshold across sequential events, which is the topology-over-amount thesis. **Reproduce:** fire the shown payload, then use `Sandbox -> Fire 5-Ring Sequence` and watch `ring_detected` flip.
 
-#### 07 - 21:29:20
-![TRACER capture 21:29:20](docs/screenshots/screenshot-07-212920.png)
+#### Analyst sign-in - scoped demo auth
 
-#### 08 - 21:29:35
-![TRACER capture 21:29:35](docs/screenshots/screenshot-08-212935.png)
+![Analyst sign-in](docs/screenshots/screenshot-05-212821.png)
 
-#### 09 - 21:31:06
-![TRACER capture 21:31:06](docs/screenshots/screenshot-09-213106.png)
+**What this shows:** the gated console entry with work-email plus passphrase and an explicit `Simulated auth for demo - no real credentials checked - COMPLIANT` footer. **Look at:** there are no production auth claims; the session written to `localStorage` (`tracer.session`) is what binds the profile, header, and roster below. **Reproduce:** sign in with any demo values, then open `Public profile` to see the same identity.
 
-#### 10 - 21:32:37
-![TRACER capture 21:32:37](docs/screenshots/screenshot-10-213237.png)
+#### Overview - live risk telemetry and ledger integrity
 
-#### 11 - 21:32:52
-![TRACER capture 21:32:52](docs/screenshots/screenshot-11-213252.png)
+![Overview telemetry](docs/screenshots/screenshot-06-212910.png)
 
-#### 12 - 21:33:02
-![TRACER capture 21:33:02](docs/screenshots/screenshot-12-213302.png)
+**What this shows:** the operator home: model quality (hold-out bar), ledger flow donut (`HIGH 56 / MED 6 / LOW 38` in the recorded burst), ledger entry count, chain head, and `OK (VERIFIED)` integrity with `LIVE FEED CONNECTED`. **Look at:** the four telemetry cards plus the two charts, each with its own Refresh, proving Overview polls live state rather than showing static mock data. **Reproduce:** fire a randomized burst in Sandbox and watch the donut and entry count move within seconds.
 
-#### 13 - 21:33:17
-![TRACER capture 21:33:17](docs/screenshots/screenshot-13-213317.png)
+#### Overview - live alert stream and honest model disclosure
 
-#### 14 - 21:33:28
-![TRACER capture 21:33:28](docs/screenshots/screenshot-14-213328.png)
+![Overview alert stream](docs/screenshots/screenshot-07-212920.png)
 
-#### 15 - 21:33:40
-![TRACER capture 21:33:40](docs/screenshots/screenshot-15-213340.png)
+**What this shows:** the `GBDT disclosure` banner (standalone recall 0% on the synthetic benchmark at calibrated thresholds; used for SHAP surfacing and policy floors only) above `LIVE_ALERT_STREAM.LOG`. **Look at:** the disclosure-first posture - the headline claim is ring detection on graph topology, not the tabular model - followed by timestamped `LOW risk / AUTO_APPROVE` entries proving the stream is wired to real evaluations. **Reproduce:** run any Sandbox preset and confirm a new line appears in the log.
 
-#### 16 - 21:33:55
-![TRACER capture 21:33:55](docs/screenshots/screenshot-16-213355.png)
+#### Sandbox - one-click attack-scenario generator
 
-#### 17 - 21:34:04
-![TRACER capture 21:34:04](docs/screenshots/screenshot-17-213404.png)
+![Sandbox presets](docs/screenshots/screenshot-08-212935.png)
+
+**What this shows:** the four presets (`Normal UPI` expected LOW, `RTO / COD` expected MEDIUM+, `Mule Ring (5 txns)` expected HIGH, `Synthetic Identity` expected HIGH) plus `Fire 5-Ring Sequence` and `Fire Randomized Burst (200-400)`. **Look at:** every card states its expected band up front, so a reviewer can falsify the system; the burst notes (~15% mule fan-out rings, polling plus invalidation sync) describe exactly what the run does. **Reproduce:** click `Mule Ring (5 txns)`, then check Graph for red mule nodes and Ledger for `HIGH` with `ring_detected: true`.
+
+#### Transactions - auditable event log with filters
+
+![Transactions log](docs/screenshots/screenshot-09-213106.png)
+
+**What this shows:** 200 burst entries with `EVENT / ACTION / DIR / AMOUNT` columns (paired `CREDIT` / `DEBIT` legs per burst id) and the `Advanced filters` panel (min amount, direction). **Look at:** amounts are real transaction amounts (Rs 1,315 - Rs 4,936 in view), not risk scores, and every row is `AUTO_APPROVE` here because this slice of the burst was clean traffic. **Reproduce:** apply a min-amount filter and confirm the table narrows; click a burst id and cross-check it in Ledger.
+
+#### Audit ledger - hash-chained tamper evidence
+
+![Audit ledger](docs/screenshots/screenshot-10-213237.png)
+
+**What this shows:** `integrity VERIFIED`, total entries (1,398 in the recorded run), chain head, recent writes, and the `CHAIN ENTRIES` table (`#, TIME, EVENT, BAND, AMOUNT, ACTION, SIDE, HASH`) with `LIVE SYNC` and 3 s auto-refresh. **Look at:** the `BAND / AMOUNT / ACTION / SIDE / HASH` columns together - each row links the decision to the money movement and its chain hash. **Reproduce:** fetch `GET /api/v1/ledger?limit=120` and `GET /api/v1/ledger/stats` and compare counts and heads with the UI.
+
+#### Settings - engine thresholds and response roster
+
+![Settings engine configuration](docs/screenshots/screenshot-11-213252.png)
+
+**What this shows:** `Engine configuration` (`API BASE URL`, `ALERT RISK THRESHOLD 70`, `WEBHOOK URL`, all persisted to `localStorage` and applied instantly) beside the `Response team` roster (5 analysts, invite persists locally). **Look at:** `HIGH if risk_score >= 70 - synced to Overview/Ledger live filters` - the threshold is a single control that the whole console respects. **Reproduce:** change the threshold, save, and confirm Overview and Ledger filters follow without a reload.
+
+#### Navigation - analyst account menu
+
+![Account menu](docs/screenshots/screenshot-12-213302.png)
+
+**What this shows:** the header account menu open over Settings: `Public profile`, `Account`, `Appearance`, `Accessibility`, `Notifications`, `Sign out`. **Look at:** Settings is one of six reachable account surfaces, all client-side routes (part of the 14/14 static build), so the console has no dead-end buttons. **Reproduce:** visit each menu entry and confirm the route loads with the session intact.
+
+#### Public profile - session-bound analyst identity
+
+![Public profile](docs/screenshots/screenshot-13-213317.png)
+
+**What this shows:** the identity synced from the login session (analyst handle, work email, `Risk Analyst / Buildathon 2026 / Track 2` chips, `Lead Analyst` role, `1,398 entries audited`, `Verified` auth, work details, and last-login activity). **Look at:** `localStorage - tracer.session` and `ONLINE - TRACER Watch` - the profile is derived from the session, not hard-coded. **Reproduce:** sign in with a different demo email and watch this page reflect it.
+
+#### Account - profile, security, and session
+
+![Account settings dark](docs/screenshots/screenshot-14-213328.png)
+
+**What this shows:** the dark-theme `Account` page: `Profile` (display name, work email, save/export), `Security` (passphrase update, demo-only with toast), and the `Active session` strip with sign-out. **Look at:** `Saved as tracer.session.email` and the session strip - edits persist in `localStorage` and sync instantly to the header and profile. **Reproduce:** save a new display name, reload, and confirm it persists.
+
+#### Account - light theme via design tokens
+
+![Account settings light](docs/screenshots/screenshot-15-213340.png)
+
+**What this shows:** the identical Account page in the light theme with the Appearance menu highlighted. **Look at:** every color comes from `frontend/styles/globals.css` (`--color-*` tokens mapped in `tailwind.config.ts`); there is no hard-coded hex outside the token file, which is why the theme flip is clean. **Reproduce:** toggle the header theme switch and revisit any page - contrast and layout hold.
+
+#### Accessibility - inclusive operator controls
+
+![Accessibility settings](docs/screenshots/screenshot-16-213355.png)
+
+**What this shows:** font-scale slider with live preview plus `High contrast`, `Reduce motion`, and `Large click targets` toggles, all applied instantly and persisted via `tracer.ally.*` with cross-page sync. **Look at:** the `Preview` line scales as the slider drags - this is a working control, not a mock. **Reproduce:** drag the slider, toggle high contrast, reload, and confirm preferences survive.
+
+#### Notifications - cross-page live alert bus
+
+![Notifications panel](docs/screenshots/screenshot-17-213404.png)
+
+**What this shows:** the header bell open with `60 live` alerts (`LOW risk - score 1/2/3 - AUTO_APPROVE`, timestamped) and the `Synced with Overview - Ledger - Graph` footer. **Look at:** the same evaluation appears in Overview, Ledger, Transactions, and here - one event bus, four views. **Reproduce:** fire a burst and watch the count climb without refreshing.
 
 ### Session timeline
 
-- **Session 1** (Day 1): Initial ring-detection prototype.
-- **Session 2** (Day 2): Graph isolation and session-id handling.
-- **Session 3** (Day 3): Same-amount repeat detector tuning.
-- **Session 4** (Day 4): Burst throughput parallelization.
-- **Session 5** (Day 5): Benchmark finalisation and honest disclosure.
-- **Session 6** (Day 6): Presentation deck polishing and media embedding.
+- **Session 1** (Day 1): ring-detection prototype - device fan-out threshold (>=4 identities) established with a household negative control.
+- **Session 2** (Day 2): graph isolation - `session_id` added to the schema so each burst renders its own ring instead of one global graph.
+- **Session 3** (Day 3): same-amount repeat detector - tolerance settled at `max(+/-Rs 5, +/-2%)`, MEDIUM on the 3rd repeat, HIGH on the 4th within 1 h / 20 txns.
+- **Session 4** (Day 4): burst throughput - `BATCH=6` parallel submission lifting the demo from ~3.6 rps to ~18 rps with the UI kept responsive.
+- **Session 5** (Day 5): benchmarks and honest disclosure - latency and GBDT 0%-recall disclosures written into the UI, docs, and README.
+- **Session 6** (Day 6): presentation and media - deck corrections plus versioned screenshots and captures in `docs/`.
 
 ---
 
